@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/microsoft/AgentSchema/refs/heads/main/schemas/v1.0/ContainerAgent.yaml
+
+kind: hosted
+name: insurance-claims-triage-vss
+description: |
+    Insurance claims triage coordinator. Orchestrates the NVIDIA VSS Agent
+    (video understanding sub-agent) plus mock policy / pricing / claim-PDF
+    tools to turn a customer's damage video into a draft claim.
+metadata:
+    tags:
+        - Insurance
+        - VSS
+        - Multi-agent
+        - Agent Framework
+        - Responses Protocol
+protocols:
+    - protocol: responses
+      version: 1.0.0
+resources:
+    cpu: "0.25"
+    memory: 0.5Gi
+environment_variables:
+    - name: AZURE_OPENAI_DEPLOYMENT
+      value: gpt-4.1
+    - name: VSS_BASE_URL
+      value: ""
+    - name: OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT
+      value: "true"
+    - name: AZURE_TRACING_GEN_AI_CONTENT_RECORDING_ENABLED
+      value: "true"
+    - name: ENABLE_SENSITIVE_DATA
+      value: "true"
+    # MOCK_VSS=true makes tools.vss_analyze_video() return canned prose from
+    # fixtures/vss/<video_id>.txt instead of calling the AKS cluster. Flip
+    # this to "true" + `azd deploy` to roll a revision that survives an
+    # AKS-down state. The agent still calls gpt-4.1 (so LLM tokens cost), but
+    # the GPU cluster can be stopped for cost savings.
+    - name: MOCK_VSS
+      value: "false"

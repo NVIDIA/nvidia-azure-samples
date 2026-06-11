@@ -1,0 +1,35 @@
+[
+  {
+    "policy_number": "POL-2025-44912",
+    "customer_name": "Alex Romero",
+    "customer_email": "alex.romero@example.com",
+    "vehicle": "2022 Toyota Camry SE",
+    "vin": "4T1G11AK7NU012345",
+    "coverage_tier": "Comprehensive",
+    "deductible_usd": 500,
+    "effective_date": "2024-11-01",
+    "expires_date": "2026-11-01"
+  },
+  {
+    "policy_number": "POL-2025-58820",
+    "customer_name": "Priya Shankar",
+    "customer_email": "priya.s@example.com",
+    "vehicle": "2008 Fiat Stilo",
+    "vin": "ZFA19200080123456",
+    "coverage_tier": "Collision + Comprehensive",
+    "deductible_usd": 1000,
+    "effective_date": "2025-02-15",
+    "expires_date": "2027-02-15"
+  },
+  {
+    "policy_number": "POL-2025-67114",
+    "customer_name": "Marcus Chen",
+    "customer_email": "marcus.chen@example.com",
+    "vehicle": "2023 Ford F-150 XLT",
+    "vin": "1FTFW1ED5NFA98765",
+    "coverage_tier": "Liability Only",
+    "deductible_usd": 0,
+    "effective_date": "2025-06-01",
+    "expires_date": "2026-06-01"
+  }
+]

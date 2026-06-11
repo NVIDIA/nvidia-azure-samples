@@ -1,0 +1,7 @@
+# Dev deps for the remote-agent pytest harness under tests/.
+# The runtime container deps live in
+# src/agent-framework-agent-basic-responses/requirements.txt and are managed
+# by `azd ai agent run` — the harness here only needs pytest + dotenv since
+# it shells out to `azd ai agent invoke`.
+pytest>=8.0.0
+python-dotenv>=1.0.0

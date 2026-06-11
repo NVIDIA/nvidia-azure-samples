@@ -1,0 +1,29 @@
+name: Task
+description: Track a piece of maintenance or implementation work
+title: "[Task]: "
+labels: ["task"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Task description
+      description: What needs to be done?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: How will we know this task is done?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
+      description: Any relevant context, links, or dependencies.
+    validations:
+      required: false

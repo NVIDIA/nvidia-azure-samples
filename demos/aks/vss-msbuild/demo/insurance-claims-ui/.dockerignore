@@ -1,0 +1,24 @@
+# Local dev artifacts — don't ship to the container
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# IDE / OS noise
+.vscode/
+.idea/
+.DS_Store
+
+# azd state and prep artifacts
+.azure/
+*.env
+*.env.*
+
+# Generated PDFs from local runs
+output/
+
+# Repo-level files unrelated to the runtime image
+.gitignore
+README.md

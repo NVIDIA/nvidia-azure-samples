@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "${AZURE_ENV_NAME}"
+    },
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "vssBaseUrl": {
+      "value": "${VSS_BASE_URL}"
+    },
+    "foundryAgentEndpoint": {
+      "value": "${FOUNDRY_AGENT_ENDPOINT}"
+    },
+    "foundryResourceGroupName": {
+      "value": "${FOUNDRY_RESOURCE_GROUP_NAME}"
+    },
+    "foundryAccountName": {
+      "value": "${FOUNDRY_ACCOUNT_NAME}"
+    },
+    "offlineMode": {
+      "value": "${OFFLINE_MODE=false}"
+    }
+  }
+}

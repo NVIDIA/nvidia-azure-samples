@@ -1,0 +1,118 @@
+{
+  "policy_number": "POL-2025-44912",
+  "video_filename": "toyota.mp4",
+  "video_id": "toyota",
+  "captured_at": "2026-05-18T20:22:10+00:00",
+  "prompt": "A customer just submitted a damage video. video_id=toyota. If the VIN is not visible, use policy POL-2025-44912 as a fallback. Run the triage workflow.",
+  "agent_text": "Claim drafted: CLM-20240613-44912\nVehicle: 2022 Toyota Camry SE (VIN 4T1G11AK7NU012345)\nDamage: Front bumper destroyed, hood dented/open, left headlight shattered, left fender crumpled, left tire flat, engine bay exposed.\nEstimated repair: $7527.50\nDeductible: $500\nPayable: $7027.50\nDraft saved to: /app/user_agent/output/CLM-20240613-44912.pdf\nStatus: Pending adjuster review.",
+  "raw_response": {
+    "id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+    "object": "response",
+    "output": [
+      {
+        "type": "function_call",
+        "id": "fc_08f284058729aa7b00ZMHbNiOEL5gJoi8xi8VGb2UoSmnXUEVn",
+        "call_id": "call_L92v6s3Qg0RHHzaHwMmRSBPM",
+        "name": "vss_analyze_video",
+        "arguments": "{\"video_id\":\"toyota\",\"question\":\"What damage is visible to the vehicle in video 'toyota'? Describe each damaged panel/area and rate severity. Also transcribe any visible VIN sticker or license plate. Be specific and concise.\"}",
+        "status": "completed",
+        "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+        "agent_reference": null
+      },
+      {
+        "type": "function_call_output",
+        "id": "fco_08f284058729aa7b00pWKmzJJ0VuExmCWM4Qj06He0qtsU4eRN",
+        "call_id": "call_L92v6s3Qg0RHHzaHwMmRSBPM",
+        "output": "The video analysis of 'toyota' reveals the following damages:  \n\n1. **Front Bumper**: Completely destroyed with large missing sections and misaligned remaining parts. Severity: High (exposes radiator/engine bay).  \n2. **Hood**: Severely dented and partially open, revealing the engine compartment. Severity: Moderate (structural impact).  \n3. **Left Headlight**: Shattered and detached. Severity: High (functional and aesthetic impact).  \n4. **Left Fender**: Crumpled inward, covering part of the wheel well. Severity: Moderate (aesthetic and alignment concerns).  \n5. **Left Tire**: Flat and deflated with a visibly bent rim. Severity: Low (noticeable but less critical).  \n6. **Engine Bay**: Exposed, showing radiator, hoses, and possibly the battery. Severity: High (indicates internal damage).  \n\nNo visible license plate or VIN sticker was detected in the video.",
+        "status": "completed",
+        "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+        "agent_reference": null
+      },
+      {
+        "type": "function_call",
+        "id": "fc_08f284058729aa7b00iDywtF1NgRf7DLQn6reDeWTKZ4IWgnys",
+        "call_id": "call_IG50U9NSWtufRSTMWyjhB5QW",
+        "name": "lookup_policy",
+        "arguments": "{\"policy_number\":\"POL-2025-44912\"}",
+        "status": "completed",
+        "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+        "agent_reference": null
+      },
+      {
+        "type": "function_call_output",
+        "id": "fco_08f284058729aa7b004BCFn1tS2LXBxSsTpA07Iy78qQ9JQDTb",
+        "call_id": "call_IG50U9NSWtufRSTMWyjhB5QW",
+        "output": "{\"found\": true, \"policy_number\": \"POL-2025-44912\", \"customer_name\": \"Alex Romero\", \"customer_email\": \"alex.romero@example.com\", \"vehicle\": \"2022 Toyota Camry SE\", \"vin\": \"4T1G11AK7NU012345\", \"coverage_tier\": \"Comprehensive\", \"deductible_usd\": 500, \"effective_date\": \"2024-11-01\", \"expires_date\": \"2026-11-01\"}",
+        "status": "completed",
+        "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+        "agent_reference": null
+      },
+      {
+        "type": "function_call",
+        "id": "fc_08f284058729aa7b00tYK9lzZS9kkRPokUYiNbEYMksScPKpLO",
+        "call_id": "call_NecfcRtfnG0Fi8IDDNbVG7bH",
+        "name": "estimate_repair_cost",
+        "arguments": "{\"damage_items\":[{\"panel\":\"front bumper\",\"severity\":\"severe\"},{\"panel\":\"hood\",\"severity\":\"moderate\"},{\"panel\":\"left headlight\",\"severity\":\"severe\"},{\"panel\":\"left fender\",\"severity\":\"moderate\"},{\"panel\":\"left tire\",\"severity\":\"minor\"},{\"panel\":\"engine bay\",\"severity\":\"severe\"}]}",
+        "status": "completed",
+        "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+        "agent_reference": null
+      },
+      {
+        "type": "function_call_output",
+        "id": "fco_08f284058729aa7b00ObpGnrAT2cHlmWt0DLk3eKpV7pXVjMTw",
+        "call_id": "call_NecfcRtfnG0Fi8IDDNbVG7bH",
+        "output": "{\"line_items\": [{\"panel\": \"front bumper\", \"severity\": \"severe\", \"part_cost_usd\": 1105.0, \"labor_hours\": 8.0, \"labor_cost_usd\": 760.0}, {\"panel\": \"hood\", \"severity\": \"moderate\", \"part_cost_usd\": 960.0, \"labor_hours\": 4.0, \"labor_cost_usd\": 380.0}, {\"panel\": \"left headlight\", \"severity\": \"severe\", \"part_cost_usd\": 780.0, \"labor_hours\": 8.0, \"labor_cost_usd\": 760.0}, {\"panel\": \"left fender\", \"severity\": \"moderate\", \"part_cost_usd\": 480.0, \"labor_hours\": 4.0, \"labor_cost_usd\": 380.0}, {\"panel\": \"left tire\", \"severity\": \"minor\", \"part_cost_usd\": 240.0, \"labor_hours\": 1.5, \"labor_cost_usd\": 142.5}, {\"panel\": \"engine bay\", \"severity\": \"severe\", \"part_cost_usd\": 780.0, \"labor_hours\": 8.0, \"labor_cost_usd\": 760.0}], \"parts_total_usd\": 4345.0, \"labor_total_usd\": 3182.5, \"grand_total_usd\": 7527.5}",
+        "status": "completed",
+        "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+        "agent_reference": null
+      },
+      {
+        "type": "function_call",
+        "id": "fc_08f284058729aa7b003oDRJc8O9c5vHbauAxmJDZK4E99LLRlS",
+        "call_id": "call_6L1bZTt0ddpvvVMJEvUQa9lY",
+        "name": "draft_claim_pdf",
+        "arguments": "{\"claim_id\":\"CLM-20240613-44912\",\"customer_name\":\"Alex Romero\",\"vehicle\":\"2022 Toyota Camry SE\",\"vin\":\"4T1G11AK7NU012345\",\"damage_summary\":\"Front bumper is destroyed with large missing sections and misaligned parts. Hood is severely dented and partially open. Left headlight shattered and detached. Left fender is crumpled inward. Left tire flat with bent rim. Engine bay exposed, suggesting possible internal damage.\",\"cost_estimate\":{\"line_items\":[{\"panel\":\"front bumper\",\"severity\":\"severe\",\"part_cost_usd\":1105,\"labor_hours\":8,\"labor_cost_usd\":760},{\"panel\":\"hood\",\"severity\":\"moderate\",\"part_cost_usd\":960,\"labor_hours\":4,\"labor_cost_usd\":380},{\"panel\":\"left headlight\",\"severity\":\"severe\",\"part_cost_usd\":780,\"labor_hours\":8,\"labor_cost_usd\":760},{\"panel\":\"left fender\",\"severity\":\"moderate\",\"part_cost_usd\":480,\"labor_hours\":4,\"labor_cost_usd\":380},{\"panel\":\"left tire\",\"severity\":\"minor\",\"part_cost_usd\":240,\"labor_hours\":1.5,\"labor_cost_usd\":142.5},{\"panel\":\"engine bay\",\"severity\":\"severe\",\"part_cost_usd\":780,\"labor_hours\":8,\"labor_cost_usd\":760}],\"parts_total_usd\":4345,\"labor_total_usd\":3182.5,\"grand_total_usd\":7527.5},\"deductible_usd\":500}",
+        "status": "completed",
+        "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+        "agent_reference": null
+      },
+      {
+        "type": "function_call_output",
+        "id": "fco_08f284058729aa7b00cdl0hXjC6AmQr4a3RmX8qaH24dbz2eP0",
+        "call_id": "call_6L1bZTt0ddpvvVMJEvUQa9lY",
+        "output": "{\"path\": \"/app/user_agent/output/CLM-20240613-44912.pdf\", \"format\": \"pdf\"}",
+        "status": "completed",
+        "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+        "agent_reference": null
+      },
+      {
+        "type": "message",
+        "id": "msg_08f284058729aa7b00p47hVA49QtVU5fhyvrLxUeR4gHYSri9G",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Claim drafted: CLM-20240613-44912\nVehicle: 2022 Toyota Camry SE (VIN 4T1G11AK7NU012345)\nDamage: Front bumper destroyed, hood dented/open, left headlight shattered, left fender crumpled, left tire flat, engine bay exposed.\nEstimated repair: $7527.50\nDeductible: $500\nPayable: $7027.50\nDraft saved to: /app/user_agent/output/CLM-20240613-44912.pdf\nStatus: Pending adjuster review.",
+            "annotations": [],
+            "logprobs": []
+          }
+        ],
+        "status": "completed",
+        "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+        "agent_reference": null
+      }
+    ],
+    "created_at": 1779135701,
+    "model": "",
+    "status": "completed",
+    "completed_at": 1779135730,
+    "response_id": "caresp_08f284058729aa7b00w2BLL8yAFCTrUMyBDWc9aAli7veoRmyW",
+    "agent_reference": {
+      "type": "agent_reference",
+      "name": "insurance-claims-triage",
+      "version": "4"
+    },
+    "agent_session_id": "37f54c1ebe982cf7a8a47327805a5582c800e2a2e9141a791ecef13fec327a5",
+    "background": false
+  }
+}

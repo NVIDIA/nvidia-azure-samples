@@ -1,0 +1,41 @@
+name: Feature Request
+description: Suggest a new sample or an enhancement to an existing one
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest an improvement. The more context you can give, the better.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What problem or use case is this feature addressing?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the sample or enhancement you would like to see. Include relevant NVIDIA software and cloud services.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you considered and why this one is preferred.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Links, references, or screenshots that help explain the request.
+    validations:
+      required: false
