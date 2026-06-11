@@ -1,154 +1,100 @@
-# __NVIDIA_OSS__ Standard Repo Template
+# NVIDIA GPU Accelerated Application Samples on Microsoft Azure
 
-This README file is from the NVIDIA_OSS standard repo template of [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file). It provides a list of files in the PLC-OSS-Template and guidelines on how to use (clone and customize) them.
+**Table Of Contents**
+- [Description](#description)
+- [Support Level](#support-level)
+- [Requirements](#requirements)
+- [Quickstart](#quickstart)
+- [Samples](#samples)
+- [Usage](#usage)
+- [Known Issues](#known-issues)
+- [Contributions](#contributions)
+- [Support](#support)
+- [License](#license)
 
-**Upon completing the customization for the project repo, the repo admin should replace this README template with the project specific README file.**
+## Description
 
-- Files (org-wide templates in the NVIDIA .github org repo; per-repo overrides allowed) in [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file)
+This repository maintains sample applications designed for NVIDIA software tools
+integrated with Microsoft Azure.
 
-   - Root 
-     - README.md skeleton (CTA + Quickstart + Support/Security/Governance links) 
-     - LICENSE (Apache 2.0 by default)
-        - For other licenses, see the [Confluence page](https://confluence.nvidia.com/pages/viewpage.action?pageId=788418816) for other licenses
-        - CLA.md file (delete if not using MIT or BSD licenses)
-     - CODE_OF_CONDUCT.md 
-     - SECURITY.md (vuln reporting path) 
-     - CONTRIBUTING.md (base; repo can add specifics)
-     - SUPPORT.md (Support levels/channels)
-     - GOVERNANCE.md (baseline; repo may extend)
-     - CITATION.md (for projects that need citation)
+For select demonstrations, the sample code is contained within this repository.
+For others, we reference and link to exceptional demonstrations available
+outside of this repository.
 
-   - .github/ 
-     - ISSUE_TEMPLATE/ (<https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository>)
-       - bug.yml, feature.yml, task.yml, config.yml 
-     - PULL_REQUEST_TEMPLATE.md (<https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository>)
-     - workflows/
-     - Note: workflow-templates/ for starter workflows should live in the org-level .github repo, not per-repo
+## Support Level
 
-   - Repo-specific (not org-template, maintained by the team)
-     - CODEOWNERS (place at .github/CODEOWNERS or repo root)
-     - CHANGELOG.md (or RELEASE.md) 
-     - ROADMAP.md 
-     - MAINTAINERS.md 
-     - NOTICE or THIRD_PARTY_NOTICES / THIRD_PARTY_LICENSES (dependency specific)
-     - Build/package files (CMake, pyproject, Dockerfile, etc.)
+These samples are provided as community examples and are not covered by NVIDIA
+Enterprise Support. They are intended as reference implementations to help users
+get started with NVIDIA software on Azure. See [Support](#support) below for how
+to get help.
 
-   - Recommended structure and hygiene
-     - docs/
-     - examples/
-     - tests/
-     - scripts/
-     - Container/dev env: Dockerfile, docker/, .devcontainer/ (optional)
-     - Build/package (language-specific):
-       - Python: pyproject.toml, setup.cfg/setup.py, requirements.txt, environment.yml
-       - C++: CMakeLists.txt, cmake/, vcpkg.json
-     - Repo hygiene: .gitignore, .gitattributes, .editorconfig, .pre-commit-config.yaml, .clang-format
+## Requirements
 
+- An active [Microsoft Azure](https://azure.microsoft.com/) account with
+  permissions to create the resources used by a given sample
+- Access to NVIDIA GPU-enabled Azure VM sizes in your target Azure region
+  (for example, A10, A100, H100, or H200 GPU families)
+- The Azure CLI installed and configured, or access to the Azure portal
+- An NGC API key for NVIDIA software access
+- Additional, sample-specific prerequisites are documented in each sample's own
+  README
 
-## Usage of [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file) for NEW NVIDIA OSS repos
+## Quickstart
 
-1. Clone the [PLC-OSS-Template](https://github.com/NVIDIA-GitHub-Management/PLC-OSS-Template?tab=readme-ov-file)
-2. Find/replace all in the clone of `___PROJECT___` and `__PROJECT_NAME__` with the name of the specific project.
-3. Inspect all files to make sure all replacements work and update text as needed
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/NVIDIA/nvidia-azure-samples
+   cd nvidia-azure-samples
+   ```
+2. Browse the [Samples](#samples) section below and pick the one that matches
+   your use case.
+3. Follow the README inside that sample's directory for setup and run
+   instructions.
 
+## Samples
 
-**What you can reuse immediately**
-- CODE_OF_CONDUCT.md
-- SECURITY.md
-- CONTRIBUTING.md (base)
-- .github/ISSUE_TEMPLATE/.yml (bug/feature/task + config.yml)
-- .github/PULL_REQUEST_TEMPLATE.md
-- Reusable workflows 
+Samples are organized by Azure service:
 
-**What you must customize per repo**
-- README.md: copy the skeleton and fill in product-specific details (Quickstart, Requirements, Usage, Support level, links)
-- LICENSE: check file is correct, update year, consult Confluence for alternatives https://confluence.nvidia.com/pages/viewpage.action?pageId=788418816, add CLA.md only if your license/process requires it
-- CODEOWNERS: replace <TEAM> with your GitHub team handle(s). Place at .github/CODEOWNERS (or repo root)
-- MAINTAINERS.md: list maintainers names/roles, escalation path
-- CHANGELOG.md (or RELEASE.md): track releases/changes
-- SUPPORT.md: Update for your project
-- ROADMAP.md (optional): upcoming milestones
-- NOTICE / THIRD_PARTY_NOTICES (if you ship third‑party content)
-- Build/package files (CMake/pyproject/Dockerfile/etc.), tests/, docs/, examples/, scripts/ as appropriate
-- Workflows: Edit if you need custom behavior 
+- [`demo/aks/vss-msbuild/`](./demo/aks/vss-msbuild) - Sample that runs
+  [NVIDIA Video Search and Summarization (VSS)](https://docs.nvidia.com/vss/)
+  Long Video Summarization on
+  [Azure Kubernetes Service (AKS)](https://learn.microsoft.com/azure/aks/),
+  self-managed deployment on Kubernetes.
+- [`demo/aks/vss-msbuild/demo/insurance-claims-foundry/`](./demo/aks/vss-msbuild/demo/insurance-claims-foundry) -
+  Sample that runs an
+  [Azure AI Foundry](https://learn.microsoft.com/azure/ai-foundry/) hosted
+  agent that orchestrates NVIDIA VSS on AKS for an insurance-claims triage
+  workflow.
 
+## Usage
 
-4. Change git origin to point to new repo and push
-5. Remove the line break below and everything above it
+Each sample directory contains its own README with detailed deployment and usage
+instructions. In general:
 
-## Usage for existing NVIDIA OSS repos
+1. Provision the required Azure infrastructure (cluster, compute, networking,
+   storage, and AI services) as described in the sample.
+2. Deploy the NVIDIA software components.
+3. Run the included workloads or applications.
+4. Clean up the resources when you are done to avoid unnecessary charges.
 
-1. Follow the steps above, but add the files to your existing repo and merge
+## Known Issues
 
-<!-- REMOVE THE LINE BELOW AND EVERYTHING ABOVE -->
------------------------------------------
-# [Project Title]
-One-sentence value proposition for users. Who is it for, and why it matters. 
+None at this time.
 
-# Overview
-What the project does? Why the project is useful?
-Provide a brief overview, highlighting key features or problem-solving capabilities.
+## Contributions
 
-# Getting Started
-Guide users on how they can get started with the project. This should include basic installation step, quick-start examples 
-```bash
-# Option A: Package manager (pip/conda/npm/etc.)
-<copy-paste install>
-
-# Option B: Container
-docker run <image> <args>
-
-# Verify (hello world)
-<one-liner or ~10-line example>
-```
-# Requirements
-Include a list of pre-requisites. 
-- OS/Arch: <summary or link to full matrix>
-- Runtime/Compiler: <versions>
-- GPU/Drivers (if applicable): CUDA <ver>, driver <ver>, etc.
-
-# Usage
-```bash
-# Minimal runnable snippet (≤20 lines)
-<code>
-```
-- More examples/tutorials: <link>
-- API reference: <link>
-
-# Performance (Optional)
-Summary of benchmarks; link to detailed results and hardware used.
-
-## Releases & Roadmap 
-- Releases/Changelog: <link>
-- (Optional) Next milestones or link to `ROADMAP.md`.
-  
-# Contribution Guidelines
-- Start here: `CONTRIBUTING.md`
-- Code of Conduct: `CODE_OF_CONDUCT.md`
-- Development quickstart (build/test):
-```bash
-<clone> && <deps> && <build/test>
-```
-## Governance & Maintainers
-- Governance: `GOVERNANCE.md`
-- Maintainers: <team/handles>
-- Labeling/triage policy: <link>
-
-## Security
-- Vulnerability disclosure: `SECURITY.md`
-- Do not file public issues for security reports.
+Contributions are welcome. Developers can contribute by opening a merge request
+or pull request and agreeing to the terms in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Support
-- Level: <Experimental | Maintained | Stable>
-- How to get help: Issues/Discussions/<channel link>
-- Response expectations (if any).
 
-# Community
-Provide the channel for community communications.
+For questions or issues:
+- Open an issue in this project for bug reports or feature requests
+- Refer to each sample's README for sample-specific guidance
 
-# References
-Provide a list of related references
+To report a security vulnerability, follow the process in
+[SECURITY.md](SECURITY.md).
 
-# License
-This project is licensed under the [NAME HERE] License - see the LICENSE.md file for details
-- License: <link>
+## License
+
+See [LICENSE](LICENSE). This project is licensed under the Apache License 2.0.
