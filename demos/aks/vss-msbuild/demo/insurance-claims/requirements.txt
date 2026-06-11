@@ -1,0 +1,5 @@
+mcp>=1.2.0
+httpx>=0.27.0
+openai>=1.55.0          # used by local_runner.py (Azure OpenAI by default; public OpenAI via USE_PUBLIC_OPENAI=1)
+azure-identity>=1.19.0  # for DefaultAzureCredential when no AZURE_OPENAI_API_KEY is set
+reportlab>=4.0.0        # optional — claim PDF generator falls back to .txt if missing

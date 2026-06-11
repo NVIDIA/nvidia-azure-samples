@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: insurance-claims-ui
+metadata:
+  template: insurance-claims-ui@1.0.0
+services:
+  ui:
+    project: .
+    language: python
+    host: containerapp
+    docker:
+      remoteBuild: true   # ACR-builds the image — no local Docker required
+infra:
+  provider: bicep
+  path: ./infra

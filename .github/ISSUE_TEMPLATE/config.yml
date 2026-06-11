@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://www.nvidia.com/object/submit-security-vulnerability.html
+    about: Please report security vulnerabilities here, not in public issues.
+  - name: NVIDIA Developer Forums
+    url: https://forums.developer.nvidia.com/
+    about: General questions and discussions about NVIDIA software.
