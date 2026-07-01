@@ -14,7 +14,7 @@ body:
     attributes:
       label: Affected sample
       description: Which sample directory is affected?
-      placeholder: demo/aks/vss-msbuild
+      placeholder: agentic/aks-samples/vss-on-aks
     validations:
       required: true
 

@@ -7,7 +7,7 @@ The repository is maintained by the NVIDIA CSP GTM SA team.
 ## Escalation
 
 Escalate repository access, release-readiness, or ownership questions to the
-GitLab project maintainers for `csp-gtm-sa/vss-msbuild-demo`.
+GitHub repository maintainers for `NVIDIA/nvidia-azure-samples`.
 
 ## Public Release Checklist
 
