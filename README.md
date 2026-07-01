@@ -53,17 +53,18 @@ to get help.
 
 ## Samples
 
-Samples are organized by Azure service:
+Samples are organized by use case:
 
-- [`msfoundry-samples/`](./msfoundry-samples) - Samples that run on Microsoft
-  Foundry service.
-- [`aks-samples/`](./aks-samples) - Samples that run on
-  [Azure Kubernetes Service (AKS)](https://learn.microsoft.com/azure/aks/),
-  self-managed deployment on Kubernetes.
-- [`aml-samples/`](./aml-samples) - Samples that run on
-  [Azure Machine Learning](https://learn.microsoft.com/azure/machine-learning/).
-- [`demos/`](./demos) - Demo applications and reference workflows.
-- [`workshops/`](./workshops) - Hands-on workshops.
+- [`agentic/`](./agentic) - Agentic AI samples and reference workflows,
+  including [`agentic/aks-samples/vss-on-aks/`](./agentic/aks-samples/vss-on-aks/)
+  for NVIDIA Video Search and Summarization (VSS) on Azure Kubernetes Service
+  (AKS).
+- [`inference/`](./inference) - Model inference samples.
+- [`training/`](./training) - Model training samples.
+- [`data-processing/`](./data-processing) - Data processing samples.
+- [`physical-ai/`](./physical-ai) - Physical AI samples.
+- [`industry-solutions/`](./industry-solutions) - Industry-focused solution
+  samples.
 
 ## Usage
 

@@ -328,7 +328,7 @@ The kept routes:
 Run from the workshop repo root:
 
 ```bash
-cd /path/to/vss-msbuild-demo/demos/aks/vss-msbuild
+cd /path/to/nvidia-azure-samples/agentic/aks-samples/vss-on-aks
 
 sed -e "s/<RELEASE_NAME>/${RELEASE}/g" \
     -e "s/<NAMESPACE>/${NAMESPACE}/g" \
