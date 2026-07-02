@@ -49,7 +49,7 @@ az account set --subscription "<YOUR_SUBSCRIPTION>"
 
 ```bash
 git clone https://github.com/NVIDIA/nvidia-azure-samples.git
-cd nvidia-azure-samples/workshops/aiq-aca-ai-search-foundry
+cd nvidia-azure-samples/agentic/aca-samples/aiq-aca-ai-search-foundry
 ```
 
 The sample directory contains everything the build and deploy need: `main.bicep`, `Dockerfile`, `config_web_azure.yml`, and the `aiq-azure-ai-search/` adapter package.
