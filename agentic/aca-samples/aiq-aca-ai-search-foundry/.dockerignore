@@ -1,0 +1,18 @@
+# The Dockerfile only needs: aiq-azure-ai-search/, config_web_azure.yml.
+# Everything below is excluded from the build context shipped to ACR.
+
+# Markdown notes (not consumed by the image build)
+*.md
+
+# This file
+.dockerignore
+
+# Python caches + virtualenvs
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
