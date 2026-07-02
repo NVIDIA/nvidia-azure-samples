@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """Pydantic config models for the Azure AI Search adapter.
 
 Mirrors the keys exposed under `functions.knowledge_search` in

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """aiq-azure-ai-search — Azure AI Search Knowledge Layer adapter for AI-Q.
 
 Importing this package registers the `azure_ai_search` backend with AI-Q's

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """Smoke tests — runnable inside an AI-Q dev container.
 
 These tests assume `aiq_agent.knowledge` is importable (i.e. they must run

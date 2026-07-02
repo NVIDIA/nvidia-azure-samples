@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 """NAT function registration: `_type: azure_ai_search_retrieval`.
 
 Adds a new function type to AI-Q's workflow registry alongside the upstream
