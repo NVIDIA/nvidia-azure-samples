@@ -1,0 +1,261 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# AI-Q on Azure — workshop config.
+#
+# Derived from the upstream config_web_frag.yml shipped in
+# nvcr.io/nvidia/blueprint/aiq-agent:2.1.0. Three deltas vs upstream:
+#
+#  1. LLM endpoints repointed at Azure (Foundry NIMs + Azure serverless),
+#     not build.nvidia.com. Each carries its own api_key env-var.
+#  2. knowledge_search block uses backend: azure_ai_search (provided by
+#     the aiq_azure_ai_search adapter pip-installed in the Dockerfile).
+#  3. summary_llm aliases the Nemotron deployment — same NIM serves both
+#     orchestration-side reasoning and the post-retrieval summary.
+#
+# Env vars consumed (set on the Container App):
+#   FOUNDRY_LLM_ENDPOINT         Foundry Nemotron NIM /v1 URL
+#   FOUNDRY_LLM_KEY              API key for the above (Key Vault secret)
+#   FOUNDRY_EMBED_ENDPOINT       Foundry embedqa NIM /v1 URL
+#   FOUNDRY_EMBED_KEY            API key for the above
+#   GPT_OSS_ENDPOINT             Azure serverless gpt-oss-120b URL
+#   GPT_OSS_KEY                  API key for the above
+#   AZURE_SEARCH_ENDPOINT        AI Search service URL
+#   AZURE_CLIENT_ID              UAMI client id (for DefaultAzureCredential)
+#   NAT_JOB_STORE_DB_URL         AI-Q job-store Postgres URL (asyncpg)
+#   AIQ_CHECKPOINT_DB            LangGraph checkpoint Postgres URL
+#   COLLECTION_NAME              AI Search index name (default aiq_default)
+
+general:
+  use_uvloop: true
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+
+  front_end:
+    _type: aiq_api
+    runner_class: aiq_api.plugin.AIQAPIWorker
+    db_url: ${NAT_JOB_STORE_DB_URL:-sqlite+aiosqlite:///./jobs.db}
+    expiry_seconds: 86400
+    cors:
+      allow_origin_regex: 'http://localhost(:\d+)?|http://127.0.0.1(:\d+)?'
+      allow_methods:
+        - GET
+        - POST
+        - DELETE
+        - OPTIONS
+      allow_headers:
+        - "*"
+      allow_credentials: true
+      expose_headers:
+        - "*"
+
+# -----------------------------------------------------------------------------
+# LLMs — three logical aliases, two underlying deployments.
+# Nemotron-3-Nano serves intent classification, research/clarifier, and summary.
+# gpt-oss-120b (Azure serverless) handles deep-research orchestration + planning.
+# -----------------------------------------------------------------------------
+llms:
+  nemotron_llm_intent:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano
+    base_url: ${FOUNDRY_LLM_ENDPOINT}
+    api_key: ${FOUNDRY_LLM_KEY}
+    temperature: 0.5
+    top_p: 0.9
+    max_tokens: 4096
+    num_retries: 5
+    chat_template_kwargs:
+      enable_thinking: true
+
+  nemotron_nano_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano
+    base_url: ${FOUNDRY_LLM_ENDPOINT}
+    api_key: ${FOUNDRY_LLM_KEY}
+    temperature: 0.1
+    top_p: 0.3
+    max_tokens: 16384
+    num_retries: 5
+    chat_template_kwargs:
+      enable_thinking: true
+
+  # Reuses the Nemotron NIM. Referenced by knowledge_search.summary_model below.
+  summary_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano
+    base_url: ${FOUNDRY_LLM_ENDPOINT}
+    api_key: ${FOUNDRY_LLM_KEY}
+    temperature: 0.2
+    top_p: 0.5
+    max_tokens: 2048
+    num_retries: 5
+
+  gpt_oss_llm:
+    # Hosted on Azure AI Foundry Models (services.ai.azure.com), which is
+    # OpenAI-compatible but not a NIM — so _type: openai, not nim.
+    # base_url must end in `/models` (the endpoint exposes /models/chat/completions);
+    # the OpenAI client appends /chat/completions.
+    # max_tokens: Foundry caps completion at the model's context window
+    # (131072 for gpt-oss-120b), but allocating the full window triggers
+    # gateway-side "Failed to reconstruct non-streaming response" errors on
+    # long-running inferences. 16384 is plenty for any single agent step.
+    #
+    # reasoning_effort: gpt-oss is a Harmony-format reasoning model. The NIM
+    # hosting at build.nvidia.com handles this implicitly; Azure's OpenAI-compat
+    # endpoint exposes it as a top-level param. Passed through verbatim because
+    # OpenAIModelConfig is `extra="allow"` and the langchain bridge forwards
+    # all non-excluded fields to ChatOpenAI(). Direct curl tests on Azure
+    # confirm reasoning_effort=medium produces real tool calls + reasoning;
+    # without it, default Azure behavior varies.
+    _type: openai
+    model_name: gpt-oss-120b
+    base_url: ${GPT_OSS_ENDPOINT}
+    api_key: ${GPT_OSS_KEY}
+    temperature: 1.0
+    top_p: 1.0
+    max_tokens: 16384
+    max_retries: 10
+    reasoning_effort: high
+
+# -----------------------------------------------------------------------------
+# Functions — knowledge_search uses the AI Search adapter; data_sources is the
+# 2.1.0 registry that drives the UI's Data Sources panel (Files + Connections
+# tabs). Without `id: knowledge_layer`, the frontend's Files tab shows
+# "Setup backend to enable files." even when an ingestor is registered.
+# -----------------------------------------------------------------------------
+functions:
+  # Data Source Registry (new in AI-Q 2.1.0). The frontend's `/v1/data_sources`
+  # call reads this list to render the toggles in the Data Sources panel and
+  # to decide whether the Files tab gets a working uploader. The `id` values
+  # are conventional: `knowledge_layer` is the id the frontend looks for to
+  # enable the file-upload UI; `web_search` shows up as a toggle.
+  data_sources:
+    _type: data_source_registry
+    sources:
+      - id: web_search
+        name: "Web Search"
+        description: "Search the web for real-time information."
+        tools:
+          - web_search_tool
+          - advanced_web_search_tool
+      - id: knowledge_layer
+        name: "Knowledge Base"
+        description: "Search uploaded documents and files (Azure AI Search)."
+        tools:
+          - knowledge_search
+
+  web_search_tool:
+    # `exa_web_search` is also available in 2.1.0 as an alternative to Tavily
+    # (full-text + content-highlights controls). Set EXA_API_KEY and change
+    # `_type` to `exa_web_search` to switch.
+    _type: tavily_web_search
+    max_results: 5
+    max_content_length: 1000
+
+  advanced_web_search_tool:
+    _type: tavily_web_search
+    max_results: 2
+    advanced_search: true
+
+  # The single block that the workshop's adapter exists to enable.
+  # Provided by the `aiq_azure_ai_search` package — see Dockerfile.
+  # `_type` is the function type registered by the adapter via NAT's
+  # @register_function decorator — see aiq_azure_ai_search/register.py.
+  knowledge_search:
+    _type: azure_ai_search_retrieval
+    collection_name: ${COLLECTION_NAME:-aiq_default}
+    endpoint: ${AZURE_SEARCH_ENDPOINT}
+    # AI Search auth via UAMI + DefaultAzureCredential; AZURE_CLIENT_ID env
+    # var tells the credential which UAMI to use.
+
+    embed_endpoint: ${FOUNDRY_EMBED_ENDPOINT}
+    embed_model: nvidia/llama-3.2-nv-embedqa-1b-v2
+    embed_dim: 2048                       # Llama-3.2-NV-embedqa-1b-v2 emits 2048-dim vectors
+    embed_api_key: ${FOUNDRY_EMBED_KEY}   # Foundry NIM static key; OpenAI client sends Bearer
+
+    top_k: 5
+    use_hybrid: true
+    use_semantic_ranker: true # AI Search's built-in semantic ranker (free on Basic SKU)
+    generate_summary: true
+    summary_model: summary_llm
+
+  # Paper Search (optional — requires SERPER_API_KEY)
+  # paper_search_tool:
+  #   _type: paper_search
+  #   max_results: 5
+  #   serper_api_key: ${SERPER_API_KEY}
+
+  intent_classifier:
+    _type: intent_classifier
+    llm: nemotron_llm_intent
+    tools:
+      - web_search_tool
+      # - paper_search_tool
+      - knowledge_search
+
+  clarifier_agent:
+    _type: clarifier_agent
+    llm: nemotron_nano_llm
+    planner_llm: nemotron_nano_llm
+    tools:
+      - web_search_tool
+      - knowledge_search
+    max_turns: 3
+    enable_plan_approval: true
+    log_response_max_chars: 2000
+    verbose: true
+
+  shallow_research_agent:
+    _type: shallow_research_agent
+    llm: nemotron_nano_llm
+    tools:
+      - web_search_tool
+      - knowledge_search
+    max_llm_turns: 10
+    max_tool_iterations: 5
+
+  deep_research_agent:
+    _type: deep_research_agent
+    # LLM split matches the upstream config_web_frag.yml shipped in the
+    # aiq-agent:2.1.0 image: gpt-oss-120b for strategic reasoning
+    # (orchestrator + planner), Nemotron Nano for per-iteration research.
+    #
+    # We tried all-gpt-oss for speed (researcher_llm: gpt_oss_llm) but two
+    # issues surfaced:
+    #   1. The orchestrator became "too chatty" after writing the report —
+    #      kept iterating with reads/searches/write_todos so the final
+    #      write_file was no longer the last message, and the agent's
+    #      _extract_report_content returned 0 chars on the first attempt.
+    #   2. Combined gpt-oss call volume exceeded the 100 RPM capacity, so
+    #      each retry hit 429s and 6-8s backoffs.
+    # Keeping researcher on Nemotron Nano hands off heavy iteration work to
+    # a separate model so the orchestrator's final write_file remains the
+    # last message — and stays within the gpt-oss rate budget.
+    #
+    # Trade-off: researcher calls are slow (~2 min each with Nemotron Nano
+    # on a single A100 with thinking enabled). Total deep_research runtime
+    # ~10-15 min — slower than the all-gpt-oss target but reliably produces
+    # a complete report.
+    #
+    # NOTE: gpt-oss-120b on Azure requires `reasoning_effort: high` on the
+    # `gpt_oss_llm` alias above — without it, the orchestrator/planner
+    # returns 2-token "give up" completions (Azure default reasoning effort
+    # is lower than NIM-hosted gpt-oss). See the `gpt_oss_llm` block.
+    orchestrator_llm: gpt_oss_llm
+    researcher_llm: nemotron_nano_llm
+    planner_llm: gpt_oss_llm
+    max_loops: 2
+    tools:
+      # - paper_search_tool
+      - advanced_web_search_tool
+      - knowledge_search
+
+workflow:
+  _type: chat_deepresearcher_agent
+  enable_escalation: true
+  enable_clarifier: true
+  use_async_deep_research: true
+  checkpoint_db: ${AIQ_CHECKPOINT_DB:-./checkpoints.db}

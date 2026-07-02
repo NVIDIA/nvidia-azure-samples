@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aiq-azure-ai-search"
+version = "0.1.0"
+description = "Azure AI Search Knowledge Layer adapter for NVIDIA AI-Q"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "AI-Q on Azure workshop" }]
+dependencies = [
+  "pydantic>=2",
+  "azure-search-documents>=11.5.0",
+  "azure-identity>=1.15",
+  "llama-index-core>=0.11",
+  "llama-index-vector-stores-azureaisearch>=0.3",
+  "llama-index-embeddings-nvidia>=0.2",
+  # File parsing — SimpleDirectoryReader needs these for PDF/DOCX/MD support
+  "llama-index-readers-file>=0.2",
+  "pypdf>=4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "ruff>=0.6",
+  "mypy>=1.10",
+]
+
+# Entry-point registration so NAT discovers `_type: azure_ai_search_retrieval`
+# at startup, BEFORE the workflow YAML's discriminated-union validator runs.
+# Without this, NAT's type registry is built without our function and YAML
+# loading fails with "Input tag 'azure_ai_search_retrieval' ... does not match
+# any of the expected tags".
+[project.entry-points."nat.plugins"]
+aiq_azure_ai_search = "aiq_azure_ai_search.register"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aiq_azure_ai_search"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
