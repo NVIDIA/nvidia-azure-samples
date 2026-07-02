@@ -26,9 +26,8 @@
 //     --template-file main.bicep \
 //     --parameters prefix=aiq
 //
-// The Postgres admin password is generated inside the template (deterministic
-// per-RG via uniqueString) and stored in the `postgres-password` Key Vault
-// secret — no parameter needed.
+// A secure Postgres admin password is generated for each deployment and stored
+// in the `postgres-password` Key Vault secret — no parameter needed.
 // =============================================================================
 
 targetScope = 'resourceGroup'
@@ -47,6 +46,10 @@ param suffix string = take(uniqueString(resourceGroup().id), 6)
 @description('Postgres administrator username')
 param pgAdminUser string = 'aiqadmin'
 
+@description('Postgres administrator password. A new secure value meeting Azure complexity requirements is generated for each deployment when omitted.')
+@secure()
+param pgAdminPassword string = 'A${newGuid()}a!'
+
 @description('Azure ML registry that hosts the NIM model assets. NVIDIA-published NIMs live in azureml-nvidia, not the public azureml registry.')
 param nimRegistry string = 'azureml-nvidia'
 
@@ -62,13 +65,6 @@ param gptOssModelVersion string = '1'
 
 @description('GlobalStandard throughput units for the gpt-oss-120b deployment. Capacity 1 = 1 RPM / 1K TPM, which is too low for the deep-research workflow (orchestrator + planner LLM both fire multiple completions per loop and the agent hammers 429s into a retry storm). 100 = 100 RPM / 100K TPM, plenty for a workshop demo. Tune up for production or down for cost.')
 param gptOssCapacity int = 100
-
-// Postgres admin password: deterministic random per-RG. Meets PG complexity
-// (uppercase + lowercase + digit + special, > 8 chars). Stable across
-// re-deploys of the same RG so the password doesn't churn. Read it back
-// from the `postgres-password` Key Vault secret after deploy — it's never
-// surfaced as a deployment output.
-var pgAdminPassword = 'P${uniqueString(resourceGroup().id, 'pgPassword')}!Aiq'
 
 // -------------------- Naming --------------------
 

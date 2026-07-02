@@ -75,7 +75,7 @@ az extension add --name containerapp --upgrade
 
 ## Task 2: Provision the infrastructure (Bicep)
 
-This is the part that is pre-deployed for you in the hosted lab. The template provisions Log Analytics + App Insights, a user-assigned managed identity with all RBAC bindings, Key Vault (with a deterministic-random Postgres admin password pre-loaded), an empty ACR, Postgres Flexible Server with the `aiq_jobs` and `aiq_checkpoints` databases, Azure AI Search (Basic), a Container Apps environment, a Foundry hub + project, both NIM online endpoints, and the `gpt-oss-120b` serverless deployment. The NIM and gpt-oss keys are written into Key Vault automatically.
+This is the part that is pre-deployed for you in the hosted lab. The template provisions Log Analytics + App Insights, a user-assigned managed identity with all RBAC bindings, Key Vault (with a securely generated Postgres admin password pre-loaded), an empty ACR, Postgres Flexible Server with the `aiq_jobs` and `aiq_checkpoints` databases, Azure AI Search (Basic), a Container Apps environment, a Foundry hub + project, both NIM online endpoints, and the `gpt-oss-120b` serverless deployment. The NIM and gpt-oss keys are written into Key Vault automatically.
 
 ### 1. Deploy the template
 
@@ -87,7 +87,7 @@ az deployment group create \
   --parameters prefix=aiq
 ```
 
-The two NIM online endpoints take ~10–15 minutes each to come up, so a fresh deploy runs **~25–30 minutes** total. The Postgres admin password is generated inside the template and stored in the `postgres-password` Key Vault secret — you never pass it as a parameter.
+The two NIM online endpoints take ~10–15 minutes each to come up, so a fresh deploy runs **~25–30 minutes** total. The Postgres admin password is securely generated inside the template and stored in the `postgres-password` Key Vault secret — you never pass it as a parameter. Re-deploying without an explicit `pgAdminPassword` value rotates the password.
 
 > **First-time `gpt-oss-120b` deploy.** If the deployment fails with `MarketplaceTermsNotAccepted`, accept the model's Marketplace terms once via the Azure portal (open the `gpt-oss-120b` model card and click **Deploy**), then re-run the command above. Bicep is idempotent, so re-running is safe.
 
