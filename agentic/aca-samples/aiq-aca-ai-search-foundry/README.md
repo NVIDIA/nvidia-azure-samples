@@ -13,7 +13,7 @@ The adapter ([`aiq-azure-ai-search`](aiq-azure-ai-search/)) self-registers via A
 Three model endpoints feed the agent:
 
 | Role | Model | Hosting |
-|------|-------|---------|
+| --- | --- | --- |
 | Chat / intent / summary | `Nemotron-3-Nano` | NIM on an Azure ML managed online endpoint (A100) |
 | Embeddings (2048-dim) | `Llama-3.2-NV-embedqa-1b-v2` | NIM on an Azure ML managed online endpoint (A100) |
 | Orchestrator / planner | `gpt-oss-120b` | Azure AI Services GlobalStandard (per-token, serverless) |
@@ -28,7 +28,7 @@ Two Azure Container Apps run the workload: an **internal-only agent** (the AI-Q 
 - An **Azure subscription** where you can create resource groups and assign roles
 - **GPU quota:** 48 vCPUs of `Standard NCADSA100v4` family in your chosen region (two `Standard_NC24ads_A100_v4` endpoints, 1×A100 each)
 - **`gpt-oss-120b` availability** in your chosen region as a GlobalStandard (serverless) deployment, plus one-time Marketplace terms acceptance on first use in a subscription
-- A **Tavily API key** for the web-search tool — free tier at [tavily.com](https://app.tavily.com/sign-in) gives 1,000 searches/month
+- A **Tavily API key** for the web-search tool — free tier at [tavily.com](https://app.tavily.com/) gives 1,000 searches/month
 - `git` to clone this repository
 - A **bash shell** — all commands below use bash syntax (`export`, `$(...)`, `\` line continuations).
 
@@ -349,7 +349,7 @@ az group delete --name "$RG" --yes --no-wait
 
 Go deeper on the pieces you just built:
 
-- [NVIDIA Azure Samples](https://github.com/NVIDIA/nvidia-azure-samples) — this sample lives here, with the `aiq-azure-ai-search` adapter source, `Dockerfile`, `config_web_azure.yml`, and `main.bicep`.
+- [NVIDIA Azure Samples](../../..) — this sample lives here, with the `aiq-azure-ai-search` adapter source, `Dockerfile`, `config_web_azure.yml`, and `main.bicep`.
 - [Adding a Data Source — NVIDIA AI-Q Blueprint](https://docs.nvidia.com/aiq-blueprint/2.1.0/extending/adding-a-data-source.html) — the pattern behind the custom Knowledge Layer adapter (`aiq_azure_ai_search`).
 - [Add a Specialized Deep Research Skill to Agent Harnesses](https://developer.nvidia.com/blog/add-a-specialized-deep-research-skill-to-agent-harnesses/) — a next step: expose an AI-Q server like this one as a reusable "skill" that agent harnesses (Claude Code, Codex, LangChain) can call to delegate research.
 - [NVIDIA AI-Q Blueprint documentation](https://docs.nvidia.com/aiq-blueprint/2.1.0/) — full docs for the blueprint this workshop is based on.
