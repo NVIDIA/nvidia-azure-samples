@@ -1,4 +1,0 @@
-# GitHub CODEOWNERS. Confirm this owner group/user before enforcing approvals.
-* @csp-gtm-sa
-*.md @csp-gtm-sa
-agentic/aks-samples/vss-on-aks/ @csp-gtm-sa
