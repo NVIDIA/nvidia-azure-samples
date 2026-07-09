@@ -274,7 +274,7 @@ helm upgrade --install "$RELEASE" ./dev-profile-lvs \
 ```
 
 > **StorageClass:** `managed-csi-premium` (Premium SSD) is recommended — NIM model caches are ~120 GiB each and benefit from premium throughput on first model load. Run `kubectl get sc` to list available classes; substitute another if your cluster uses one.
-
+>
 > **Re-installs with surviving model cache:** the chart sets `helm.sh/resource-policy: keep` on its `NIMCache` resources, so `helm uninstall` does NOT remove the 120 GiB model PVCs. If you re-install on a cluster that still has them, add `--take-ownership` to the `helm upgrade --install` command above so Helm adopts the existing `NIMCache`/PVC/ConfigMap objects instead of erroring on name collision. This saves 15–30 min of NGC re-download.
 
 ### 3. Wait for pods to come up
@@ -317,7 +317,7 @@ kubectl -n "$NAMESPACE" get pods | grep lvs-server
 The kept routes:
 
 | Hostname | Path | Backend |
-|----------|------|---------|
+| --- | --- | --- |
 | `vss.<IP>.nip.io` | `/` | vss-ui |
 | `vss.<IP>.nip.io` | `/api`, `/chat`, `/websocket`, `/static`, `/api/chat` | vss-agent (HTTP + WS) |
 | `vss.<IP>.nip.io` | `/vst` | vst-ingress-dev |
@@ -345,7 +345,7 @@ kubectl get ingress -n "$NAMESPACE"
 
 The ingress should show the nginx LB IP under `ADDRESS` (may take 10–20s for nginx-ingress to publish the status):
 
-```
+```text
 NAME                  CLASS   HOSTS                                              ADDRESS         PORTS   AGE
 vss-lvs-vss-ingress   nginx   vss.<IP>.nip.io,kibana.vss.<IP>.nip.io             <EXTERNAL_HOST> 80      30s
 ```
@@ -357,7 +357,7 @@ vss-lvs-vss-ingress   nginx   vss.<IP>.nip.io,kibana.vss.<IP>.nip.io            
 All URLs resolve to the same Azure public IP (`$EXTERNAL_HOST`) via `nip.io`:
 
 | Service | URL |
-|---------|-----|
+| --- | --- |
 | VSS UI | `http://vss.${EXTERNAL_HOST}.nip.io/` |
 | VSS Agent HTTP API | `http://vss.${EXTERNAL_HOST}.nip.io/api/v1` |
 | VSS Agent WebSocket | `ws://vss.${EXTERNAL_HOST}.nip.io/websocket` |

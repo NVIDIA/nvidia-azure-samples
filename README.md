@@ -1,6 +1,7 @@
 # NVIDIA GPU Accelerated Application Samples on Microsoft Azure
 
-**Table Of Contents**
+## Table of Contents
+
 - [Description](#description)
 - [Support Level](#support-level)
 - [Requirements](#requirements)
@@ -30,7 +31,7 @@ to get help.
 
 ## Requirements
 
-- An active [Microsoft Azure](https://azure.microsoft.com/) account with
+- An active [Microsoft Azure](https://azure.microsoft.com/en-us) account with
   permissions to create the resources used by a given sample
 - Access to NVIDIA GPU-enabled Azure VM sizes in your target Azure region
   (for example, A10, A100, H100, or H200 GPU families)
@@ -42,10 +43,12 @@ to get help.
 ## Quickstart
 
 1. Clone this repository:
+
    ```bash
    git clone https://github.com/NVIDIA/nvidia-azure-samples
    cd nvidia-azure-samples
    ```
+
 2. Browse the [Samples](#samples) section below and pick the one that matches
    your use case.
 3. Follow the README inside that sample's directory for setup and run
@@ -89,6 +92,7 @@ or pull request and agreeing to the terms in [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Support
 
 For questions or issues:
+
 - Open an issue in this project for bug reports or feature requests
 - Refer to each sample's README for sample-specific guidance
 

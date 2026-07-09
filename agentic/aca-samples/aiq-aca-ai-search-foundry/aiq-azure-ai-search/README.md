@@ -1,6 +1,6 @@
 # aiq-azure-ai-search
 
-Azure AI Search Knowledge Layer adapter for [NVIDIA AI-Q](https://docs.nvidia.com/aiq-blueprint/).
+Azure AI Search Knowledge Layer adapter for [NVIDIA AI-Q](https://docs.nvidia.com/aiq-blueprint/latest/).
 
 Routes AI-Q's document ingestion and retrieval through **Azure AI Search**, with embeddings from any OpenAI-compatible embedding endpoint (NVIDIA NIM, Azure OpenAI, or build.nvidia.com). AI-Q's source stays untouched — the package self-registers via the `nat.plugins` entry-point group declared in `pyproject.toml`.
 
@@ -31,7 +31,7 @@ End-to-end working against AI-Q v2 (`nvcr.io/nvidia/blueprint/aiq-agent:2.0.0`).
 ### Compatibility
 
 | Component | Tested against |
-|---|---|
+| --- | --- |
 | AI-Q | `nvcr.io/nvidia/blueprint/aiq-agent:2.0.0` |
 | Azure AI Search | Basic SKU with free semantic ranker; vectors with HNSW (cosine) |
 | Embedding model | `llama-3.2-nv-embedqa-1b-v2` (2048-dim) on a NIM endpoint; any OpenAI-compatible `/v1/embeddings` URL should work |

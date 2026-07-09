@@ -1,6 +1,6 @@
 <!--
 Thanks for opening a pull request. Please fill in the sections below.
-Make sure your commits are signed off (`git commit -s`) as described in CONTRIBUTING.MD.
+Make sure your commits are signed off (`git commit -s`) as described in CONTRIBUTING.md.
 -->
 
 ## Summary
@@ -27,6 +27,6 @@ Make sure your commits are signed off (`git commit -s`) as described in CONTRIBU
 ## Checklist
 
 - [ ] My commits are signed off (`git commit -s`)
-- [ ] I have read [CONTRIBUTING.MD](../CONTRIBUTING.MD) and agree to the [CLA](../CLA.MD)
+- [ ] I have read [CONTRIBUTING.md](../CONTRIBUTING.md)
 - [ ] I have updated documentation where relevant
 - [ ] I have verified the affected sample runs end-to-end, or explained why that was not possible

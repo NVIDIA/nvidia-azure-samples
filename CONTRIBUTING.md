@@ -13,6 +13,24 @@ Developer workflow for code contributions is as follows:
    workflows change.
 4. Open a merge request or pull request and complete the checklist.
 
+## Local Checks
+
+Install and enable the repository's pre-commit hooks:
+
+```bash
+python3 -m pip install pre-commit==4.6.0
+pre-commit install
+```
+
+Run every check against the full repository:
+
+```bash
+pre-commit run --all-files
+```
+
+After installation, `git commit` checks staged files. GitHub Actions reruns all
+hooks when a pull request is opened or updated.
+
 ## Signing Your Work
 
 We require that all contributors sign off on their commits. This certifies that
