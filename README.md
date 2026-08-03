@@ -62,7 +62,9 @@ Samples are organized by use case:
   including [`agentic/aks-samples/vss-on-aks/`](./agentic/aks-samples/vss-on-aks/)
   for NVIDIA Video Search and Summarization (VSS) on Azure Kubernetes Service
   (AKS).
-- [`inference/`](./inference) - Model inference samples.
+- [`inference/`](./inference) - Model inference samples, including
+  [`inference/aca/nemotron_asr/`](./inference/aca/nemotron_asr/) for NVIDIA
+  Nemotron ASR Streaming NIM on Azure Container Apps.
 - [`training/`](./training) - Model training samples.
 - [`data-processing/`](./data-processing) - Data processing samples.
 - [`physical-ai/`](./physical-ai) - Physical AI samples.
