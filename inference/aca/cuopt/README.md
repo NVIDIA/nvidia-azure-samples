@@ -72,7 +72,8 @@ MessagePack responses from the self-hosted cuOpt REST API.
   ACR, Azure Maps, and Container Apps resources
 - An NVIDIA AI Enterprise license that includes self-hosted NVIDIA cuOpt
 - An NGC personal API key with access to the cuOpt container
-- Python 3.11 or later and Node.js 22 or later for local development
+- Python 3.11 or later, [uv](https://docs.astral.sh/uv/), and Node.js 22 or
+  later for local development
 
 Creating the `AcrPull` and `Azure Maps Data Reader` assignments requires
 `Microsoft.Authorization/roleAssignments/write`.
@@ -199,6 +200,62 @@ After the presentation, restore scale-to-zero:
 
 The script deactivates zero-traffic revisions so an older revision cannot keep
 an unnecessary GPU replica allocated.
+
+## Run the Python Notebook
+
+[`freshroute_cuopt_aca.ipynb`](freshroute_cuopt_aca.ipynb) is a programmable
+version of the same recovery story. It generates the synthetic Phoenix dataset
+and both routing payloads in Python, calls the cuOpt NIM REST API directly for
+the morning and disruption plans, validates the returned routes, and renders
+them with Azure Maps. It does not call or depend on the FreshRoute web API. The
+notebook includes fixed zoom-10 snapshots plus interactive maps with pan, wheel
+zoom, per-driver layer controls, and stop tooltips. Azure Maps Route Directions
+turns each cuOpt stop sequence into road-following display geometry.
+
+The cuOpt app is private by default. For a temporary developer session, expose
+it only to the laptop or network running Jupyter:
+
+```bash
+export ENABLE_CUOPT_NOTEBOOK_ACCESS="true"
+export CUOPT_ALLOWED_IP_CIDR="203.0.113.10/32"
+./deploy.sh
+```
+
+There is deliberately no option to expose the raw solver without an allowlist.
+This mode has network filtering but no application-level authentication; do not
+send customer data through it. If the laptop's public IP changes, redeploy with
+the new `/32` value. When notebook access is enabled, `deploy.sh` also grants the
+signed-in Azure CLI user Azure Maps Data Reader. Set
+`AZURE_MAPS_NOTEBOOK_PRINCIPAL_ID` explicitly when a different user will run
+the notebook.
+
+Create a notebook environment, copy the environment template, and add the cuOpt
+URL and Azure Maps client ID printed by `deploy.sh` to `.env`:
+
+```bash
+uv venv --python 3.11 .venv-cuopt-notebook
+source .venv-cuopt-notebook/bin/activate
+uv pip install -r notebook-requirements.txt
+
+cp .env.example .env
+# Edit .env with the deployed Azure asset values.
+jupyter lab freshroute_cuopt_aca.ipynb
+```
+
+The notebook loads `.env` with `python-dotenv` and uses `AzureCliCredential` to
+authenticate to Azure Maps directly. The real `.env` is ignored by Git; only
+the placeholder-only `.env.example` belongs in the repository. The committed
+notebook has no outputs, and Maps access tokens remain only in kernel memory
+and request headers. Interactive tiles pass through a loopback-only server in
+the notebook kernel, so keep the kernel running while exploring the maps. The
+static snapshots remain available in exported notebook output after the kernel
+stops. Restore private solver ingress when the developer session is finished:
+
+```bash
+export ENABLE_CUOPT_NOTEBOOK_ACCESS="false"
+unset CUOPT_ALLOWED_IP_CIDR
+./deploy.sh
+```
 
 ## Recorded Fallback
 

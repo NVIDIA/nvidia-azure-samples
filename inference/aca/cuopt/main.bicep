@@ -17,6 +17,9 @@ param workloadProfileType string = 'Consumption-GPU-NC24-A100'
 @description('Friendly name assigned to the GPU workload profile.')
 param workloadProfileName string = 'gpu-a100'
 
+@description('Optional Microsoft Entra user object ID granted Azure Maps Data Reader for the local notebook.')
+param notebookMapsPrincipalId string = ''
+
 @description('Tags applied to all supported resources.')
 param tags object = {
   application: 'freshroute-cuopt'
@@ -87,6 +90,16 @@ resource mapsReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: {
     principalId: identity.properties.principalId
     principalType: 'ServicePrincipal'
+    roleDefinitionId: mapsDataReaderRoleId
+  }
+}
+
+resource notebookMapsReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(notebookMapsPrincipalId)) {
+  name: guid(maps.id, notebookMapsPrincipalId, mapsDataReaderRoleId)
+  scope: maps
+  properties: {
+    principalId: notebookMapsPrincipalId
+    principalType: 'User'
     roleDefinitionId: mapsDataReaderRoleId
   }
 }

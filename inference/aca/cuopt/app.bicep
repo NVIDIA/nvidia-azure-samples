@@ -36,6 +36,12 @@ param webTargetImage string = 'freshroute/web:1.0.0'
 @description('CIDR allowed to open the public FreshRoute web application.')
 param allowedIpCidr string = ''
 
+@description('Expose the cuOpt REST API for a temporary, IP-restricted developer notebook session.')
+param cuoptExternalIngress bool = false
+
+@description('Single trusted CIDR allowed to call cuOpt when notebook access is enabled.')
+param cuoptAllowedIpCidr string = ''
+
 @description('Minimum warm cuOpt replicas. Zero minimizes idle GPU cost.')
 @minValue(0)
 @maxValue(1)
@@ -59,6 +65,7 @@ resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' 
 var cuoptAppName = 'cuopt-nim'
 var webAppName = 'freshroute-web'
 var cuoptBaseUrl = 'https://${cuoptAppName}.internal.${containerAppsEnvironmentDomain}'
+var exposeCuopt = cuoptExternalIngress && !empty(cuoptAllowedIpCidr)
 var ipSecurityRestrictions = empty(allowedIpCidr) ? [] : [
   {
     name: 'AllowPresenter'
@@ -67,6 +74,14 @@ var ipSecurityRestrictions = empty(allowedIpCidr) ? [] : [
     action: 'Allow'
   }
 ]
+var cuoptIpSecurityRestrictions = exposeCuopt ? [
+  {
+    name: 'AllowNotebookDeveloper'
+    description: 'Allow one explicitly configured developer network to call the cuOpt REST API.'
+    ipAddressRange: cuoptAllowedIpCidr
+    action: 'Allow'
+  }
+] : []
 
 resource cuoptApp 'Microsoft.App/containerApps@2026-01-01' = {
   name: cuoptAppName
@@ -84,10 +99,11 @@ resource cuoptApp 'Microsoft.App/containerApps@2026-01-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: false
+        external: exposeCuopt
         allowInsecure: false
         targetPort: 5000
         transport: 'http'
+        ipSecurityRestrictions: cuoptIpSecurityRestrictions
       }
       registries: [
         {
@@ -243,3 +259,4 @@ resource webApp 'Microsoft.App/containerApps@2026-01-01' = {
 
 output webFqdn string = webApp.properties.configuration.ingress.fqdn
 output cuoptFqdn string = cuoptApp.properties.configuration.ingress.fqdn
+output cuoptExternalIngressEnabled bool = exposeCuopt

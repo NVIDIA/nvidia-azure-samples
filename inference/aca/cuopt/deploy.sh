@@ -17,6 +17,8 @@ readonly ALLOWED_IP_CIDR="${ALLOWED_IP_CIDR:-}"
 readonly PUBLIC_DEMO_ACKNOWLEDGED="${PUBLIC_DEMO_ACKNOWLEDGED:-false}"
 readonly CUOPT_MIN_REPLICAS="${CUOPT_MIN_REPLICAS:-0}"
 readonly ENABLE_ARTIFACT_STREAMING="${ENABLE_ARTIFACT_STREAMING:-false}"
+readonly ENABLE_CUOPT_NOTEBOOK_ACCESS="${ENABLE_CUOPT_NOTEBOOK_ACCESS:-false}"
+readonly CUOPT_ALLOWED_IP_CIDR="${CUOPT_ALLOWED_IP_CIDR:-}"
 
 fail() {
   printf 'Error: %s\n' "$*" >&2
@@ -36,6 +38,18 @@ az account show --output none >/dev/null 2>&1 || fail "Run 'az login' before dep
 if [[ -z "$ALLOWED_IP_CIDR" && "$PUBLIC_DEMO_ACKNOWLEDGED" != "true" ]]; then
   fail "Set ALLOWED_IP_CIDR (recommended) or explicitly set PUBLIC_DEMO_ACKNOWLEDGED=true."
 fi
+
+if [[ "$ENABLE_CUOPT_NOTEBOOK_ACCESS" == "true" && -z "$CUOPT_ALLOWED_IP_CIDR" ]]; then
+  fail "CUOPT_ALLOWED_IP_CIDR is required when ENABLE_CUOPT_NOTEBOOK_ACCESS=true."
+fi
+
+notebook_maps_principal_id="${AZURE_MAPS_NOTEBOOK_PRINCIPAL_ID:-}"
+if [[ "$ENABLE_CUOPT_NOTEBOOK_ACCESS" == "true" && -z "$notebook_maps_principal_id" ]]; then
+  notebook_maps_principal_id="$(az ad signed-in-user show --query id --output tsv 2>/dev/null || true)"
+  [[ -n "$notebook_maps_principal_id" ]] || \
+    fail "Set AZURE_MAPS_NOTEBOOK_PRINCIPAL_ID to the Entra user object ID that will run Jupyter."
+fi
+readonly NOTEBOOK_MAPS_PRINCIPAL_ID="$notebook_maps_principal_id"
 
 printf 'Checking %s availability in %s...\n' "$WORKLOAD_PROFILE_TYPE" "$LOCATION"
 supported_profile="$(
@@ -70,7 +84,11 @@ az deployment group create \
   --name "${DEPLOYMENT_NAME}-infra" \
   --resource-group "$RESOURCE_GROUP" \
   --template-file "$SCRIPT_DIR/main.bicep" \
-  --parameters location="$LOCATION" namePrefix="$NAME_PREFIX" workloadProfileType="$WORKLOAD_PROFILE_TYPE" \
+  --parameters \
+    location="$LOCATION" \
+    namePrefix="$NAME_PREFIX" \
+    workloadProfileType="$WORKLOAD_PROFILE_TYPE" \
+    notebookMapsPrincipalId="$NOTEBOOK_MAPS_PRINCIPAL_ID" \
   --output none
 
 deployment_output() {
@@ -131,6 +149,8 @@ az deployment group create \
     cuoptTargetImage="$CUOPT_TARGET_IMAGE" \
     webTargetImage="$WEB_TARGET_IMAGE" \
     allowedIpCidr="$ALLOWED_IP_CIDR" \
+    cuoptExternalIngress="$ENABLE_CUOPT_NOTEBOOK_ACCESS" \
+    cuoptAllowedIpCidr="$CUOPT_ALLOWED_IP_CIDR" \
     cuoptMinReplicas="$CUOPT_MIN_REPLICAS" \
   --output none
 
@@ -141,7 +161,21 @@ web_fqdn="$(
     --query properties.outputs.webFqdn.value \
     --output tsv
 )"
+cuopt_fqdn="$(
+  az deployment group show \
+    --name "${DEPLOYMENT_NAME}-apps" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query properties.outputs.cuoptFqdn.value \
+    --output tsv
+)"
 
 printf 'Deployment complete.\n'
 printf 'FreshRoute URL: https://%s\n' "$web_fqdn"
-printf 'cuOpt ingress is internal and its minimum replica count is %s.\n' "$CUOPT_MIN_REPLICAS"
+printf 'Azure Maps client ID: %s\n' "$MAPS_CLIENT_ID"
+if [[ "$ENABLE_CUOPT_NOTEBOOK_ACCESS" == "true" ]]; then
+  printf 'cuOpt notebook URL: https://%s\n' "$cuopt_fqdn"
+  printf 'cuOpt access is restricted to %s.\n' "$CUOPT_ALLOWED_IP_CIDR"
+else
+  printf 'cuOpt ingress is internal.\n'
+fi
+printf 'cuOpt minimum replica count is %s.\n' "$CUOPT_MIN_REPLICAS"
