@@ -10,15 +10,13 @@
 //   - Custom agent image in ACR — built post-deploy via `az acr build`
 //   - Frontend image in ACR — imported post-deploy via `az acr import`
 //
-// All three model endpoints are provisioned here:
-//   - Nemotron-3-Nano NIM (Azure ML online endpoint, A100 GPU)
-//   - Llama-3.2-NV-embedqa-1b-v2 NIM (Azure ML online endpoint, A100 GPU)
-//   - gpt-oss-120b (Azure AI Services account + GlobalStandard deployment,
-//     per-token billed). First-time deployment in a subscription needs
-//     one-time Marketplace terms acceptance — see the `aiServices` block.
+// The model tier follows AI-Q 2.2's upstream defaults:
+//   - Nemotron 3.5 Lightning (Foundry managed compute) for intent and shallow research
+//   - Nemotron 3 Embed 1B (Foundry managed compute) for native Azure AI Search vectors
+//   - Nemotron 3 Ultra (Fireworks pay-per-token) for deep research
 //
-// Each NIM consumes 24 vCPUs of Standard NCADSA100v4 family quota in the
-// RG's region (96 needed total — 48 per participant if you're scaling).
+// Lightning and Embed use official models, runtime images, and A100 deployment
+// templates from the Microsoft Foundry Hugging Face catalog.
 //
 // Usage:
 //   az deployment group create \
@@ -38,6 +36,7 @@ targetScope = 'resourceGroup'
 param location string = resourceGroup().location
 
 @description('Resource name prefix')
+@minLength(2)
 param prefix string = 'aiq'
 
 @description('Random suffix for globally unique resource names')
@@ -50,21 +49,22 @@ param pgAdminUser string = 'aiqadmin'
 @secure()
 param pgAdminPassword string = 'A${newGuid()}a!'
 
-@description('Azure ML registry that hosts the NIM model assets. NVIDIA-published NIMs live in azureml-nvidia, not the public azureml registry.')
-param nimRegistry string = 'azureml-nvidia'
+@description('Official Foundry catalog model and managed-compute template for Nemotron 3.5 Lightning.')
+param lightningModel string = 'azureml://registries/azure-huggingface/models/nvidia--nvidia-nemotron-3.5-lightning-30b-a3b-nvfp4/versions/2'
+param lightningDeploymentTemplate string = 'azureml://registries/azure-huggingface/deploymenttemplates/nvidia--nvidia-nemotron-3-5-lightning-30b-a3b-nvfp4--256k-nvidia-a100/labels/latest'
 
-@description('Azure ML registry model versions for the two NIMs. Bump these when NVIDIA publishes new NIM revisions in the Foundry catalog.')
-param nemotronModelVersion string = '1'
-param embedqaModelVersion string = '2'
+@description('Official Foundry catalog model and managed-compute template for Nemotron 3 Embed 1B.')
+param embeddingModel string = 'azureml://registries/azure-huggingface/models/nvidia--nemotron-3-embed-1b-bf16/versions/1'
+param embeddingDeploymentTemplate string = 'azureml://registries/azure-huggingface/deploymenttemplates/nvidia--nemotron-3-embed-1b-bf16--nvidia-a100/labels/latest'
 
-@description('VM SKU for the NIM online endpoint deployments. Standard_NC24ads_A100_v4 is the smallest supported size per the Foundry catalog and is sufficient for workshop traffic.')
-param nimInstanceType string = 'Standard_NC24ads_A100_v4'
+@description('Foundry Fireworks model version for Nemotron 3 Ultra.')
+param ultraModelVersion string = '1'
 
-@description('Azure AI Foundry Models version for gpt-oss-120b. Bump when Microsoft publishes a newer revision.')
-param gptOssModelVersion string = '1'
+@description('Azure region for Fireworks models. DataZoneStandard is currently available only in supported US regions.')
+param ultraLocation string = 'eastus'
 
-@description('GlobalStandard throughput units for the gpt-oss-120b deployment. Capacity 1 = 1 RPM / 1K TPM, which is too low for the deep-research workflow (orchestrator + planner LLM both fire multiple completions per loop and the agent hammers 429s into a retry storm). 100 = 100 RPM / 100K TPM, plenty for a workshop demo. Tune up for production or down for cost.')
-param gptOssCapacity int = 100
+@description('DataZoneStandard capacity for the pay-per-token Nemotron 3 Ultra deployment. Deep research uses concurrent calls; 100 avoids throttling seen at 10.')
+param ultraCapacity int = 100
 
 // -------------------- Naming --------------------
 
@@ -76,20 +76,17 @@ var acrName = '${prefix}acr${suffix}'
 var pgName = '${prefix}-pg-${suffix}'
 var searchName = '${prefix}-search-${suffix}'
 var acaEnvName = '${prefix}-env'
-var foundryHubName = '${prefix}-foundry-hub'
-var foundryProjectName = '${prefix}-foundry-project'
+var foundryProjectName = '${prefix}-project'
 var foundryStorageName = 'foundry${suffix}'
 var aiServicesName = '${prefix}-aiservices-${suffix}'
+var dbInitSql = loadTextContent('init-db.sql')
 
 // Built-in role definition IDs
 var roles = {
   acrPull: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
   keyVaultSecretsUser: '4633458b-17de-408a-b874-0445c86b69e6'
-  keyVaultAdministrator: '00482a5a-887f-4fb3-b363-3b7fe8e74483'
   searchIndexDataContributor: '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
   searchServiceContributor: '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
-  storageBlobDataContributor: 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-  azureMLDataScientist: 'f6c7c914-8db3-469d-8ca1-694a8f32e121'  // for deployment-script traffic update
 }
 
 // -------------------- Observability --------------------
@@ -147,7 +144,7 @@ resource kvUamiRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-// Secrets — depend on the admin role being in place
+// Secrets are written through the ARM control plane during deployment.
 resource secPgPassword 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: kv
   name: 'postgres-password'
@@ -226,15 +223,12 @@ resource dbCheckpoints 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023
   name: 'aiq_checkpoints'
 }
 
-// -------------------- Init: create the `job_info` table --------------------
-// AI-Q's NAT job-store reads from `job_info` for deep-research orchestration
-// but doesn't reliably auto-create the table on first boot. Initialize it
-// here via an AzureCLI deployment script so participants don't have to run
-// DDL manually. CREATE TABLE IF NOT EXISTS makes it idempotent across
-// redeploys.
+// -------------------- Initialize AI-Q 2.2 databases --------------------
+// AI-Q needs job metadata, access, admission, event, summary, and LangGraph
+// checkpoint tables before the backend starts. init-db.sql is idempotent.
 
-resource jobInfoInit 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
-  name: '${prefix}-init-job-info-${suffix}'
+resource databaseInit 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  name: '${prefix}-init-databases-${suffix}'
   location: location
   kind: 'AzureCLI'
   properties: {
@@ -242,7 +236,7 @@ resource jobInfoInit 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
     timeout: 'PT10M'
     retentionInterval: 'P1D'
     cleanupPreference: 'OnSuccess'
-    forceUpdateTag: '1'
+    forceUpdateTag: uniqueString(dbInitSql)
     storageAccountSettings: {
       storageAccountName: foundryStorage.name
       storageAccountKey: foundryStorage.listKeys().keys[0].value
@@ -253,16 +247,17 @@ resource jobInfoInit 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
       { name: 'PGPASSWORD', secureValue: pgAdminPassword }
       { name: 'PGDATABASE', value: dbJobs.name }
       { name: 'PGSSLMODE', value: 'require' }
+      { name: 'INIT_SQL_BASE64', value: base64(dbInitSql) }
     ]
     scriptContent: '''
       set -e
       apk add --no-cache postgresql-client
-      psql -c "CREATE TABLE IF NOT EXISTS job_info (job_id VARCHAR PRIMARY KEY, status VARCHAR, config_file VARCHAR, error VARCHAR, output_path VARCHAR, created_at TIMESTAMP WITH TIME ZONE, updated_at TIMESTAMP WITH TIME ZONE, expiry_seconds INTEGER, output VARCHAR, is_expired BOOLEAN);"
-      echo "Ensured job_info table in $PGDATABASE on $PGHOST"
+      echo "$INIT_SQL_BASE64" | base64 -d | psql --set ON_ERROR_STOP=1
+      echo "Initialized AI-Q 2.2 database schemas on $PGHOST"
     '''
   }
-  // dbJobs is implicit via `value: dbJobs.name`; only pgFwAzure needs to be explicit
   dependsOn: [
+    dbCheckpoints
     pgFwAzure
   ]
 }
@@ -334,9 +329,7 @@ resource acaEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
   }
 }
 
-// -------------------- Azure AI Foundry hub + project --------------------
-//
-// The hub + project anchor the NIM online-endpoint deployments below.
+// -------------------- Deployment-script storage --------------------
 
 resource foundryStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: foundryStorageName
@@ -350,237 +343,83 @@ resource foundryStorage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   }
 }
 
-resource foundryHub 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
-  name: foundryHubName
-  location: location
-  kind: 'Hub'
-  identity: { type: 'SystemAssigned' }
-  properties: {
-    friendlyName: 'AI-Q workshop hub'
-    publicNetworkAccess: 'Enabled'
-    storageAccount: foundryStorage.id
-    keyVault: kv.id
-  }
-}
+// -------------------- Microsoft Foundry models --------------------
+// DataZoneStandard is pay per token. Fireworks.EnableDeploy must be registered
+// in the subscription, and Fireworks' non-Microsoft data terms apply.
 
-resource foundryProject 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
-  name: foundryProjectName
-  location: location
-  kind: 'Project'
-  identity: { type: 'SystemAssigned' }
-  properties: {
-    friendlyName: 'AI-Q workshop project'
-    hubResourceId: foundryHub.id
-  }
-}
-
-// -------------------- NIM model deployments --------------------
-//
-// Two managed online endpoints, one per NIM. Both deploy from the
-// `azureml-nvidia` registry's curated NIM-microservice model assets (the
-// public `azureml` registry does NOT contain these). Each consumes 24 vCPUs
-// of Standard NCADSA100v4 family quota (1×A100 per endpoint).
-//
-// authMode: 'Key' so participants and the agent can use a static primary key
-// fetched via listKeys() — the default (AMLToken) issues short-lived JWTs
-// that don't fit the workshop's keyvaultref:// pattern.
-//
-// Deployments take ~10–15 minutes each to come up. Bicep total runtime grows
-// accordingly; expect ~25–30 minutes for the full template on a fresh RG.
-
-// --- Nemotron-3-Nano (chat / intent / summary) ---
-
-resource nemoEndpoint 'Microsoft.MachineLearningServices/workspaces/onlineEndpoints@2024-04-01' = {
-  parent: foundryProject
-  name: 'nemotron-3-nano-nim'
-  location: location
-  identity: { type: 'SystemAssigned' }
-  properties: {
-    authMode: 'Key'
-    publicNetworkAccess: 'Enabled'
-  }
-}
-
-resource nemoDeployment 'Microsoft.MachineLearningServices/workspaces/onlineEndpoints/deployments@2024-04-01' = {
-  parent: nemoEndpoint
-  name: 'default'
-  location: location
-  sku: { name: nimInstanceType, capacity: 1 }
-  properties: {
-    endpointComputeType: 'Managed'
-    model: 'azureml://registries/${nimRegistry}/models/NVIDIA-Nemotron-3-Nano-NIM-microservice/versions/${nemotronModelVersion}'
-    instanceType: nimInstanceType
-    scaleSettings: { scaleType: 'Default' }
-  }
-}
-
-resource secFoundryLlmKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: kv
-  name: 'foundry-llm-key'
-  properties: { value: nemoEndpoint.listKeys().primaryKey }
-  dependsOn: [ nemoDeployment ]
-}
-
-// --- embedqa-1b-v2 (embeddings, 2048-dim) ---
-
-resource embedEndpoint 'Microsoft.MachineLearningServices/workspaces/onlineEndpoints@2024-04-01' = {
-  parent: foundryProject
-  name: 'llama-3-2-nv-embedqa-1b-v2-nim'
-  location: location
-  identity: { type: 'SystemAssigned' }
-  properties: {
-    authMode: 'Key'
-    publicNetworkAccess: 'Enabled'
-  }
-}
-
-resource embedDeployment 'Microsoft.MachineLearningServices/workspaces/onlineEndpoints/deployments@2024-04-01' = {
-  parent: embedEndpoint
-  name: 'default'
-  location: location
-  sku: { name: nimInstanceType, capacity: 1 }
-  properties: {
-    endpointComputeType: 'Managed'
-    model: 'azureml://registries/${nimRegistry}/models/Llama-3.2-NV-embedqa-1b-v2-NIM-microservice/versions/${embedqaModelVersion}'
-    instanceType: nimInstanceType
-    scaleSettings: { scaleType: 'Default' }
-  }
-}
-
-resource secFoundryEmbedKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: kv
-  name: 'foundry-embed-key'
-  properties: { value: embedEndpoint.listKeys().primaryKey }
-  dependsOn: [ embedDeployment ]
-}
-
-// -------------------- Route traffic to the NIM deployments --------------------
-//
-// Newly created AML online deployments receive 0% traffic by default — you
-// have to update the endpoint to point traffic at them. Bicep can't redeclare
-// the endpoint to set traffic post-creation (same symbolic-name error), so
-// we use a deployment script that runs after both deployments exist.
-
-resource amlDeployerRA 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: foundryProject
-  name: guid(foundryProject.id, uami.id, roles.azureMLDataScientist)
-  properties: {
-    principalId: uami.properties.principalId
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      roles.azureMLDataScientist
-    )
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource setNimTraffic 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
-  name: '${prefix}-set-nim-traffic-${suffix}'
-  location: location
-  kind: 'AzureCLI'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: { '${uami.id}': {} }
-  }
-  properties: {
-    azCliVersion: '2.60.0'
-    timeout: 'PT10M'
-    retentionInterval: 'P1D'
-    cleanupPreference: 'OnSuccess'
-    forceUpdateTag: '1'
-    storageAccountSettings: {
-      storageAccountName: foundryStorage.name
-      storageAccountKey: foundryStorage.listKeys().keys[0].value
-    }
-    environmentVariables: [
-      { name: 'RG', value: resourceGroup().name }
-      { name: 'WORKSPACE', value: foundryProject.name }
-      { name: 'NEMO_ENDPOINT', value: nemoEndpoint.name }
-      { name: 'EMBED_ENDPOINT', value: embedEndpoint.name }
-    ]
-    scriptContent: '''
-      set -e
-      az extension add --name ml --yes --upgrade
-      az ml online-endpoint update --resource-group "$RG" --workspace-name "$WORKSPACE" --name "$NEMO_ENDPOINT"  --traffic "default=100"
-      az ml online-endpoint update --resource-group "$RG" --workspace-name "$WORKSPACE" --name "$EMBED_ENDPOINT" --traffic "default=100"
-      echo "Routed 100% traffic to default deployments on both NIM endpoints."
-    '''
-  }
-  dependsOn: [
-    nemoDeployment
-    embedDeployment
-    amlDeployerRA
-  ]
-}
-
-// -------------------- gpt-oss-120b serverless --------------------
-//
-// Standard / GlobalStandard model deployment on a dedicated Azure AI Services
-// account. Per-token billing (no upfront vCPU allocation, no idle cost).
-//
-// First-time deployment in a subscription requires Marketplace terms
-// acceptance for the OpenAI-OSS model. If Bicep errors with
-// `MarketplaceTermsNotAccepted`, accept once via Azure portal (`Deploy` on
-// the gpt-oss-120b model card) and re-run.
-
-resource aiServices 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
+resource aiServices 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
   name: aiServicesName
-  location: location
+  location: ultraLocation
   kind: 'AIServices'
   sku: { name: 'S0' }
   identity: { type: 'SystemAssigned' }
   properties: {
+    allowProjectManagement: true
     customSubDomainName: aiServicesName
     publicNetworkAccess: 'Enabled'
   }
 }
 
-resource gptOssDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+resource foundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
   parent: aiServices
-  name: 'gpt-oss-120b'
-  sku: { name: 'GlobalStandard', capacity: gptOssCapacity }
+  name: foundryProjectName
+  location: ultraLocation
+  identity: { type: 'SystemAssigned' }
   properties: {
-    model: { format: 'OpenAI-OSS', name: 'gpt-oss-120b', version: gptOssModelVersion }
+    displayName: 'AI-Q 2.2 workshop'
+    description: 'AI-Q 2.2 with native Azure AI Search and managed NVIDIA models'
   }
 }
 
-resource secGptOssKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource lightningDeployment 'Microsoft.CognitiveServices/accounts/managedComputeDeployments@2026-05-15-preview' = {
+  parent: aiServices
+  name: 'nemotron-3-5-lightning'
+  sku: { name: 'GlobalManagedCompute', capacity: 1 }
+  properties: {
+    model: lightningModel
+    deploymentTemplate: lightningDeploymentTemplate
+    acceleratorType: 'A100_80GB'
+    versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
+  }
+  dependsOn: [ foundryProject ]
+}
+
+resource embedDeployment 'Microsoft.CognitiveServices/accounts/managedComputeDeployments@2026-05-15-preview' = {
+  parent: aiServices
+  name: 'nemotron-3-embed-1b'
+  sku: { name: 'GlobalManagedCompute', capacity: 1 }
+  properties: {
+    model: embeddingModel
+    deploymentTemplate: embeddingDeploymentTemplate
+    acceleratorType: 'A100_80GB'
+    versionUpgradeOption: 'OnceNewDefaultVersionAvailable'
+  }
+  dependsOn: [ lightningDeployment ]
+}
+
+resource ultraDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = {
+  parent: aiServices
+  name: 'nemotron-3-ultra'
+  sku: { name: 'DataZoneStandard', capacity: ultraCapacity }
+  properties: {
+    model: {
+      format: 'Fireworks'
+      name: 'FW-Nemotron-3-Ultra-NVFP4'
+      version: ultraModelVersion
+    }
+  }
+  dependsOn: [ embedDeployment ]
+}
+
+resource secFoundryKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: kv
-  name: 'gpt-oss-key'
+  name: 'foundry-key'
   properties: { value: aiServices.listKeys().key1 }
-  dependsOn: [ gptOssDeployment ]
-}
-
-// -------------------- Wire AI Services into the Foundry Project --------------------
-//
-// Without this connection, the gpt-oss-120b deployment doesn't show up
-// alongside the NIMs in the Foundry portal's project view — it only
-// appears under the standalone AI Services resource. The connection
-// surfaces the AI Services account (and all its model deployments) inside
-// `ai.azure.com` → project → Models + endpoints, so participants see one
-// unified view of all three model endpoints.
-//
-// API-key auth for simplicity. For production, swap to AAD (set authType
-// to 'AAD' and grant the project's MSI `Cognitive Services User` on the
-// AI Services account).
-
-resource aiServicesConnection 'Microsoft.MachineLearningServices/workspaces/connections@2024-04-01' = {
-  parent: foundryProject
-  name: aiServicesName
-  properties: {
-    category: 'AIServices'
-    target: aiServices.properties.endpoint
-    authType: 'ApiKey'
-    isSharedToAll: true
-    credentials: {
-      key: aiServices.listKeys().key1
-    }
-    metadata: {
-      ApiType: 'Azure'
-      ResourceId: aiServices.id
-    }
-  }
-  dependsOn: [ gptOssDeployment ]
+  dependsOn: [
+    lightningDeployment
+    embedDeployment
+    ultraDeployment
+  ]
 }
 
 // -------------------- Outputs --------------------
@@ -618,18 +457,8 @@ output searchEndpoint string = 'https://${search.name}.search.windows.net'
 output acaEnvName string = acaEnv.name
 
 // Foundry
-output foundryHubName string = foundryHub.name
 output foundryProjectName string = foundryProject.name
-
-// NIM endpoints — scoring URIs end in /score; the agent uses the /v1 form
-// (OpenAI-compatible). Strip /score and append /v1 client-side.
-output nemotronScoringUri string = nemoEndpoint.properties.scoringUri
-output embedqaScoringUri string = embedEndpoint.properties.scoringUri
-
-// gpt-oss-120b — endpoint is the AI Services account's base + /models.
-// The agent's config_web_azure.yml uses this URL verbatim; the OpenAI
-// client appends /chat/completions when calling.
-output gptOssEndpoint string = '${aiServices.properties.endpoint}models'
+output foundryEndpoint string = 'https://${aiServicesName}.services.ai.azure.com/openai/v1/'
 output aiServicesName string = aiServices.name
 
 // Observability
