@@ -1,0 +1,15 @@
+[Unit]
+Description=Bearer-auth proxy for Switchyard Cursor access
+After=network-online.target switchyard-cursor.service
+Wants=network-online.target
+Requires=switchyard-cursor.service
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/switchyard/cursor-proxy.env
+ExecStart=%h/miniconda3/bin/python3 %h/.local/bin/switchyard_auth_proxy.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
