@@ -1,0 +1,50 @@
+schema_version = 1
+
+[llm_clients.local_vllm]
+format = "openai_chat"
+base_url = "http://127.0.0.1:8000/v1"
+api_key_env = "LOCAL_VLLM_API_KEY"
+
+[llm_clients.azure_foundry]
+format = "openai_chat"
+base_url = "https://your-foundry-resource.services.ai.azure.com/openai/v1"
+api_key_env = "AZURE_FOUNDRY_API_KEY"
+
+[targets.nemotron]
+id = "nemotron-3.5-lightning"
+llm_client = "local_vllm"
+extra_body = { chat_template_kwargs = { enable_thinking = false } }
+
+[targets.gpt_56_sol]
+id = "gpt-5.6-sol"
+llm_client = "azure_foundry"
+
+[routes.nemotron]
+id = "nemotron-3.5-lightning"
+type = "passthrough"
+target = "nemotron"
+
+[routes.gpt_56_sol]
+id = "gpt-5.6-sol"
+type = "passthrough"
+target = "gpt_56_sol"
+
+[routes.auto]
+id = "switchyard/auto"
+type = "llm_classifier"
+mode = "capability"
+classifier_target = "nemotron"
+strong_target = "gpt_56_sol"
+weak_target = "nemotron"
+base_threshold = 0.5
+max_output_tokens = 256
+
+[routes.smart]
+id = "switchyard/smart"
+type = "llm_classifier"
+mode = "capability"
+classifier_target = "nemotron"
+strong_target = "gpt_56_sol"
+weak_target = "nemotron"
+base_threshold = 0.5
+max_output_tokens = 256

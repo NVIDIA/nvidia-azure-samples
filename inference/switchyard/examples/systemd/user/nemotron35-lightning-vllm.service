@@ -1,0 +1,16 @@
+[Unit]
+Description=Nemotron 3.5 Lightning NVFP4 vLLM server
+After=docker.service network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.config/nemotron35-vllm/env
+ExecStartPre=-/usr/bin/docker rm -f nemotron35-lightning-vllm
+ExecStart=/usr/bin/docker run --rm --name nemotron35-lightning-vllm --pull=missing --gpus all --ipc=host --network=host -v %h/.cache/huggingface:/root/.cache/huggingface -e HF_TOKEN -e HUGGING_FACE_HUB_TOKEN -e HF_HUB_DISABLE_XET=1 -e HF_HUB_DOWNLOAD_TIMEOUT=120 -e HF_HUB_ETAG_TIMEOUT=60 -e HF_HOME=/root/.cache/huggingface -e VLLM_ALLOW_LONG_MAX_MODEL_LEN=1 -e PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True vllm/vllm-openai:v0.27.1 nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4 --served-model-name nemotron-3.5-lightning --host 0.0.0.0 --port 8000 --trust-remote-code --quantization modelopt_fp4 --moe-backend marlin --kv-cache-dtype fp8 --gpu-memory-utilization 0.65 --max-model-len 65536 --max-num-seqs 1 --max-num-batched-tokens 4096 --enable-prefix-caching --speculative_config.method dspark --speculative_config.model nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark --speculative_config.num_speculative_tokens 3 --mamba-backend flashinfer --mamba-ssm-cache-dtype float16 --enable-mamba-cache-stochastic-rounding --mamba-cache-philox-rounds 5 --mamba-cache-mode align --reasoning-parser nemotron_v3 --tool-call-parser qwen3_coder --enable-auto-tool-choice
+ExecStop=/usr/bin/docker stop -t 30 nemotron35-lightning-vllm
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=45
+
+[Install]
+WantedBy=default.target

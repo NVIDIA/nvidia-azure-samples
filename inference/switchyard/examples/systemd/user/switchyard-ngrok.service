@@ -1,0 +1,14 @@
+[Unit]
+Description=ngrok HTTPS tunnel for Switchyard Cursor access
+After=network-online.target switchyard-auth-proxy.service
+Wants=network-online.target
+Requires=switchyard-auth-proxy.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/ngrok http 127.0.0.1:4100 --log stdout --log-format logfmt --log-level info
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
