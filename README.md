@@ -64,7 +64,9 @@ Samples are organized by use case:
   (AKS).
 - [`inference/`](./inference) - Model inference samples, including
   [`inference/aca/nemotron_asr/`](./inference/aca/nemotron_asr/) for NVIDIA
-  Nemotron ASR Streaming NIM on Azure Container Apps.
+  Nemotron ASR Streaming NIM on Azure Container Apps and
+  [`inference/aca/switchyard_hol/`](./inference/aca/switchyard_hol/) for the
+  Microsoft Foundry Switchyard hands-on lab.
 - [`training/`](./training) - Model training samples.
 - [`data-processing/`](./data-processing) - Data processing samples.
 - [`physical-ai/`](./physical-ai) - Physical AI samples.
