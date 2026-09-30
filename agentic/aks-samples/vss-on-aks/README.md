@@ -2,7 +2,7 @@
 
 This workshop guides you through deploying the **NVIDIA Video Search and Summarization (VSS) Long Video Summarization (LVS)** blueprint on Azure Kubernetes Service (AKS) using a single `Standard_NC96ads_A100_v4` node (4× A100 80 GB GPUs).
 
-Services are exposed through a single Azure public IP using the **ingress-nginx** controller as a `LoadBalancer` Service. The UI, VSS Agent (HTTP + WebSocket), VST, and Kibana all share that one IP via [`nip.io`](https://nip.io/) hostnames — no DNS setup needed.
+Services are exposed through one Azure public IP using the **HAProxy Kubernetes Ingress** controller and [`nip.io`](https://nip.io/) hostnames. This update targets VSS `v3.3.0rc0`: deployment, summarization, and report generation were validated on an existing cluster with two NC48ads nodes (four A100 80 GB GPUs total). Creating a fresh cluster and the browser upload control remain to be validated.
 
 ---
 
@@ -10,8 +10,14 @@ Services are exposed through a single Azure public IP using the **ingress-nginx*
 
 - Azure CLI (`az`) installed and logged in
 - `kubectl` and `helm` (3.x) installed
-- NGC API key — [generate one here](https://org.ngc.nvidia.com/setup/api-keys)
+- NGC API key — see the [NGC User Guide](https://docs.nvidia.com/ngc/latest/ngc-user-guide.html) for key generation instructions
 - Azure subscription with quota for `Standard_NC96ads_A100_v4` (96 vCPUs of `Standard NCADS_A100_v4` family)
+- A short MP4 you can use for the guided UI exercise
+
+If you already have an AKS cluster with four available A100 80 GB GPUs, set the
+environment variables for that cluster, obtain its credentials, and continue
+at Task 3. Check the current context and GPU allocation before installing on a
+shared cluster.
 
 ---
 
@@ -131,10 +137,18 @@ helm repo update nvidia
 
 ### 2. Install NVIDIA GPU Operator
 
+For the new GPU pool created with `--gpu-driver none` in Task 2:
+
 ```bash
 helm install --create-namespace --namespace gpu-operator nvidia/gpu-operator --wait --generate-name
 
 ```
+
+If reusing AKS nodes that already provide NVIDIA drivers, the container toolkit,
+and the device plugin, keep those components in place. The existing-cluster
+validation used GPU Operator `v26.7.1` with `driver.enabled=false`,
+`toolkit.enabled=false`, and `devicePlugin.enabled=false`. Reuse an existing
+operator installation; do not install a second driver or device plugin.
 
 ### 3. Validate GPU Operator
 
@@ -178,7 +192,7 @@ Install the operator (`--create-namespace` covers a missing namespace if you ski
 helm upgrade --install nim-operator nvidia/k8s-nim-operator \
   -n nim-operator \
   --create-namespace \
-  --version=3.1.0
+  --version=3.1.2
 ```
 
 ### 5. Verify NIM Operator
@@ -193,214 +207,190 @@ Wait until all pods are `Running` before proceeding.
 
 ---
 
-## Task 4: Install ingress-nginx (single public IP)
+## Task 4: Install HAProxy ingress
 
-The VSS LVS profile expects `global.externalHost` to be set at chart install time — the UI bakes that hostname into its `NEXT_PUBLIC_*` env vars. We therefore install the ingress controller **first**, capture the Azure-provisioned LoadBalancer IP, then install VSS using that IP.
+Install the controller before VSS so its public IP can be used in browser URLs.
+The controller is cluster-wide; if one already exists, reuse its IngressClass
+and LoadBalancer Service instead of installing a second one.
 
-> The vss repo README example uses HAProxy with `DaemonSet + hostPort`, which expects node IPs to be routable. On AKS nodes are private by default, so we use **ingress-nginx + `Service.type=LoadBalancer`** — Azure provisions one stable public IP that becomes our single entry point. Ingress-nginx is also the most common ingress on AKS and easier to debug.
-
-### 1. Add the ingress-nginx Helm repository
-
-```bash
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm repo update ingress-nginx
-```
-
-### 2. Install ingress-nginx
+From this workshop directory:
 
 ```bash
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-  --version 4.15.1 \
-  -n ingress-nginx --create-namespace \
-  --set controller.service.type=LoadBalancer \
-  --set controller.service.externalTrafficPolicy=Local
+helm repo add haproxytech https://haproxytech.github.io/helm-charts --force-update
+helm repo update haproxytech
+
+helm upgrade --install vss-haproxy haproxytech/kubernetes-ingress \
+  --version 1.54.2 \
+  -n vss-ingress --create-namespace \
+  -f aks/ingress/haproxy-values.yaml \
+  --wait --timeout 5m
+
+kubectl get ingressclass haproxy
+kubectl -n vss-ingress get svc vss-haproxy-kubernetes-ingress -w
 ```
 
-> `externalTrafficPolicy=Local` preserves real client IPs in access logs and avoids an extra in-cluster hop. On AKS with a single nginx replica this is fine; for multi-replica deployments add `controller.replicaCount=N` plus a `PodDisruptionBudget` so rolling upgrades don't drop traffic.
-
-### 3. Wait for the Azure public IP
+Once the Service has an `EXTERNAL-IP`, press Ctrl-C to stop watching and capture it:
 
 ```bash
-kubectl -n ingress-nginx rollout status deploy/ingress-nginx-controller
-
-until kubectl -n ingress-nginx get svc ingress-nginx-controller \
-  -o jsonpath='{.status.loadBalancer.ingress[0].ip}' | grep -E '.'; do
-  echo "Waiting for LoadBalancer IP..."; sleep 5
-done; echo
-
-export EXTERNAL_HOST=$(kubectl -n ingress-nginx get svc ingress-nginx-controller \
-  -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-echo "EXTERNAL_HOST=$EXTERNAL_HOST"
+export EXTERNAL_HOST="$(kubectl -n vss-ingress get svc \
+  vss-haproxy-kubernetes-ingress \
+  -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"
+test -n "$EXTERNAL_HOST"
+echo "Azure LoadBalancer IP: $EXTERNAL_HOST"
 ```
 
-> **If your laptop can't reach `$EXTERNAL_HOST:80` later** (TCP times out from a corp/VPN network), the most likely cause is a specific-IP blocklist hitting *this* allocation. Uninstall and reinstall nginx to get a new IP from the Azure pool — the LoadBalancer service IP is non-sticky: `helm uninstall ingress-nginx -n ingress-nginx && kubectl delete ns ingress-nginx`, then re-run Step 2. In practice this resolves most corp-firewall issues for ephemeral workshop URLs.
+The supplied values use `externalTrafficPolicy: Local`, as tested on AKS.
 
 ---
 
 ## Task 5: Deploy VSS LVS Blueprint
 
-### 1. Clone the repository
+### 1. Check out the tested release and apply the A100 cache patch
+
+Run from this workshop directory. Keep `WORKSHOP_DIR` for the later commands.
 
 ```bash
-git clone --branch feat/kubernetes-support --single-branch \
+export WORKSHOP_DIR="$PWD"
+git clone --branch v3.3.0rc0 --single-branch \
   https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization.git
+cd video-search-and-summarization
 
-cd video-search-and-summarization/deployments/helm/developer-profiles
+git apply "$WORKSHOP_DIR/aks/patches/nemotron-35-a100-cache-profile.patch"
+helm dependency build deploy/helm/services/nims --skip-refresh
+helm dependency build deploy/helm/developer-profiles/dev-profile-lvs --skip-refresh
 ```
 
-### 2. Install the chart
+The release moved the LVS chart to `deploy/helm/developer-profiles/dev-profile-lvs`.
+It uses **Nemotron 3.5 Lightning 30B-A3B** for the LLM and the integrated
+**Cosmos 3 Nano Reasoner** checkpoint in RT-VLM. The old `llmNameSlug`,
+`vlmNameSlug`, and Cosmos Reason2 A100 KV-cache overrides do not apply.
 
-Use the inline-set form from the vss repo README so we don't have to edit `values-lvs.yaml`. `EXTERNAL_HOST` from Task 4 is reused; the chart prepends `vss.` for the main host and `kibana.vss.` for Kibana, both resolving to the same Azure public IP through `nip.io`.
+On A100, the unmodified Nemotron `NIMCache` selects multiple model profiles,
+including NVFP4 profiles the hardware cannot serve, into its 100 GiB PVC.
+The patch adds an optional `cacheModelProfile` selector; the workshop values
+pin it to the INT4 profile also used by the NIMService. This patch was validated
+locally with `v3.3.0rc0` and is required until it is included upstream.
 
-We also inject a **custom `A100-80GB` hardware profile** for `cosmos-reason2-8b` — the chart ships profiles for `H100`, `L40S`, and `RTXPRO6000BW`, but none for A100. With chart defaults, cosmos's vLLM engine OOMs on KV cache: it tries to serve at `max_model_len=262144` (256K context), which needs ~36 GiB of KV cache, but defaults leave only ~33 GiB after weights and cudagraphs. Setting `NIM_KVCACHE_PERCENT=0.9` (vLLM `gpu_memory_utilization=0.9`) bumps the budget to 0.9 × 80 GB = 72 GB, leaving ~49 GiB for KV — comfortably above the 36 GiB needed. `nemotron-nano-9b-v2` works fine on chart defaults so we leave its profile empty.
+The source tag pins the charts. Some RC images use `develop-latest`, so their
+contents can change between deployments even with the source tag pinned.
+
+### 2. Create NGC secrets outside Helm values
 
 ```bash
-export STORAGE_CLASS="managed-csi-premium"
+kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml \
+  | kubectl apply -f -
+
+kubectl create secret generic ngc-api -n "$NAMESPACE" \
+  --from-literal=NGC_API_KEY="$NGC_API_KEY" \
+  --from-literal=NGC_CLI_API_KEY="$NGC_API_KEY" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl create secret docker-registry ngc-secret -n "$NAMESPACE" \
+  --docker-server=nvcr.io \
+  --docker-username='$oauthtoken' \
+  --docker-password="$NGC_API_KEY" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+The A100 values set `ngc.createSecrets: false`, keeping the key out of Helm
+release values. Do not commit keys or rendered Secret manifests.
+
+### 3. Install the LVS chart
+
+```bash
+cd deploy/helm/developer-profiles
 
 helm upgrade --install "$RELEASE" ./dev-profile-lvs \
-  -f dev-profile-lvs/values-lvs.yaml \
-  -n "$NAMESPACE" --create-namespace \
-  --set llmNameSlug=nvidia-nemotron-nano-9b-v2 \
-  --set vlmNameSlug=cosmos-reason2-8b \
-  --set-string ngc.apiKey="$NGC_API_KEY" \
+  -f ./dev-profile-lvs/values-lvs.yaml \
+  -f "$WORKSHOP_DIR/aks/values/values-aks-a100.yaml" \
   --set global.externalHost="vss.${EXTERNAL_HOST}.nip.io" \
   --set global.kibanaPublicUrl="http://kibana.vss.${EXTERNAL_HOST}.nip.io" \
-  --set global.storageClass="$STORAGE_CLASS" \
-  --set nims.cosmos-reason2-8b.hardwareProfile=A100-80GB \
-  --set 'nims.cosmos-reason2-8b.envByHardware.A100-80GB[0].name=NIM_KVCACHE_PERCENT' \
-  --set-string 'nims.cosmos-reason2-8b.envByHardware.A100-80GB[0].value=0.9' \
-  --set 'nims.cosmos-reason2-8b.envByHardware.A100-80GB[1].name=NIM_DISABLE_MM_PREPROCESSOR_CACHE' \
-  --set-string 'nims.cosmos-reason2-8b.envByHardware.A100-80GB[1].value=1'
+  -n "$NAMESPACE" --timeout 10m
 ```
 
-> **StorageClass:** `managed-csi-premium` (Premium SSD) is recommended — NIM model caches are ~120 GiB each and benefit from premium throughput on first model load. Run `kubectl get sc` to list available classes; substitute another if your cluster uses one.
->
-> **Re-installs with surviving model cache:** the chart sets `helm.sh/resource-policy: keep` on its `NIMCache` resources, so `helm uninstall` does NOT remove the 120 GiB model PVCs. If you re-install on a cluster that still has them, add `--take-ownership` to the `helm upgrade --install` command above so Helm adopts the existing `NIMCache`/PVC/ConfigMap objects instead of erroring on name collision. This saves 15–30 min of NGC re-download.
+`managed-csi-premium` is the tested Azure StorageClass. Check `kubectl get sc`
+and change the workshop value if your cluster uses another class.
 
-### 3. Wait for pods to come up
-
-First-time install: NIM model pull from NGC dominates (~15–30 min for ~240 GiB across two models). Re-install with cached models: ~5–10 min for cosmos cold-start (weight load + `torch.compile` + cudagraph capture for 67 sizes).
+### 4. Wait for model cache and workloads
 
 ```bash
-kubectl get pods -n "$NAMESPACE" -w
+kubectl get nimcache,nimservice,pvc -n "$NAMESPACE"
+kubectl get pods -n "$NAMESPACE"
 ```
 
-Move on once `lvs-server`, `streamprocessing-ms-dev`, `vss-agent`, `vss-ui`, both `*-nim-*` NIMService pods, Elasticsearch, and Kibana are `Running` / `Ready`.
-
-### 4. Recover lvs-server if it's stuck in CrashLoopBackOff
-
-`lvs-server` probes the cosmos VLM at startup via the OpenAI-compatible `/chat/completions` endpoint. If cosmos isn't Ready yet, lvs-server exits non-zero and K8s applies exponential backoff (capped at 5 min). After ~15 restarts it's already at max backoff, so even once cosmos is finally Ready you may wait up to 5 min for the next retry.
-
-Skip the backoff by deleting the pod — K8s recreates it immediately:
-
-```bash
-kubectl -n "$NAMESPACE" delete pod -l app.kubernetes.io/name=lvs-server
-```
-
-Confirm:
-
-```bash
-kubectl -n "$NAMESPACE" get pods | grep lvs-server
-# should show 1/1 Running, 0 restarts within ~90s
-```
+Wait for Nemotron `NIMCache` and `NIMService` to report `Ready`, all PVCs to be
+`Bound`, and long-running pods to be `Running` and Ready. First model download
+and initialization can take several minutes. The four GPU workloads are
+Nemotron NIM, RT-VLM, video summarization, and VIOS stream processing.
 
 ---
 
 ## Task 6: Apply the workshop ingress
 
-[aks/ingress/vss-ingress.yaml](aks/ingress/vss-ingress.yaml) is a workshop-tailored nginx-class Ingress. It derives from the vss repo's `vss-ingress-example.yaml` but is rewritten for ingress-nginx:
-
-- `ingressClassName: nginx` (vs. haproxy in upstream)
-- Annotations: `nginx.ingress.kubernetes.io/proxy-body-size: 2g` + `proxy-read-timeout`/`proxy-send-timeout: 3600` — needed for large video uploads and long-lived streaming/WebSocket connections
-- Paths only cover services the LVS profile actually deploys (the upstream's `behavior-analytics`, `perception-sdr-alerts`, `nvstreamer-alerts`, `vss-va-mcp`, `video-analytics-api`, `alert-bridge` are for the VSS-alerts profile, not LVS — including them just creates 503-on-miss noise)
-
-The kept routes:
-
-| Hostname | Path | Backend |
-| --- | --- | --- |
-| `vss.<IP>.nip.io` | `/` | vss-ui |
-| `vss.<IP>.nip.io` | `/api`, `/chat`, `/websocket`, `/static`, `/api/chat` | vss-agent (HTTP + WS) |
-| `vss.<IP>.nip.io` | `/vst` | vst-ingress-dev |
-| `kibana.vss.<IP>.nip.io` | `/` | kibana |
-
-### 1. Substitute and apply
-
-Run from the workshop repo root:
+The [workshop ingress](aks/ingress/vss-ingress.yaml) routes the 3.3 UI, agent,
+WebSocket, VST, report artifacts, and Kibana to their current Service names.
+It uses HAProxy's `haproxy` IngressClass.
 
 ```bash
-cd /path/to/nvidia-azure-samples/agentic/aks-samples/vss-on-aks
-
+cd "$WORKSHOP_DIR"
 sed -e "s/<RELEASE_NAME>/${RELEASE}/g" \
     -e "s/<NAMESPACE>/${NAMESPACE}/g" \
     -e "s/<EXTERNAL_HOST>/${EXTERNAL_HOST}/g" \
     aks/ingress/vss-ingress.yaml \
   | kubectl apply -n "$NAMESPACE" -f -
-```
 
-### 2. Verify
-
-```bash
 kubectl get ingress -n "$NAMESPACE"
 ```
 
-The ingress should show the nginx LB IP under `ADDRESS` (may take 10–20s for nginx-ingress to publish the status):
-
-```text
-NAME                  CLASS   HOSTS                                              ADDRESS         PORTS   AGE
-vss-lvs-vss-ingress   nginx   vss.<IP>.nip.io,kibana.vss.<IP>.nip.io             <EXTERNAL_HOST> 80      30s
-```
+The UI hostname should be `vss.<EXTERNAL_HOST>.nip.io`; Kibana uses
+`kibana.vss.<EXTERNAL_HOST>.nip.io`.
 
 ---
 
-## Task 7: Access the stack
-
-All URLs resolve to the same Azure public IP (`$EXTERNAL_HOST`) via `nip.io`:
-
-| Service | URL |
-| --- | --- |
-| VSS UI | `http://vss.${EXTERNAL_HOST}.nip.io/` |
-| VSS Agent HTTP API | `http://vss.${EXTERNAL_HOST}.nip.io/api/v1` |
-| VSS Agent WebSocket | `ws://vss.${EXTERNAL_HOST}.nip.io/websocket` |
-| VST ingest | `http://vss.${EXTERNAL_HOST}.nip.io/vst` |
-| Kibana | `http://kibana.vss.${EXTERNAL_HOST}.nip.io/` |
-
-Print the workshop URL:
+## Task 7: Verify and try guided prompts
 
 ```bash
 echo "Open http://vss.${EXTERNAL_HOST}.nip.io/"
+curl -sS -o /dev/null -w 'UI HTTP %{http_code}\n' \
+  "http://vss.${EXTERNAL_HOST}.nip.io/"
+kubectl get pods,nimcache,nimservice -n "$NAMESPACE"
 ```
 
-### In-cluster smoke test
+Use a short, non-sensitive MP4 for the exercise:
 
-If the URLs don't load from your laptop, the most common cause is a corporate / VPN firewall blocking outbound TCP to specific Azure public IPs. Confirm the stack itself is healthy by hitting nginx from inside the cluster:
+1. In the UI, upload the clip and wait for its ingestion to finish. Confirm it
+   appears in the video list and plays. Record the **sensor name** shown by VSS.
+2. Start a new chat scoped to that sensor. Ask: **“Summarize this video and cite
+   the timestamps of the main events.”** Compare the response with playback.
+3. Ask: **“What changes between the beginning, middle, and end? Mention only
+   things visible in this video.”** Check that the answer does not invent people,
+   vehicles, or actions absent from the clip.
+4. Ask: **“Generate a report for `<sensor name>` using video summarization.”**
+   Use the sensor name exactly as VSS displays it, generally without `.mp4`.
+   Accept or refine the report prompt, then open the Markdown/PDF and playback
+   links. Confirm the report names the intended sensor and timestamps match.
 
-```bash
-NGINX_CIP=$(kubectl -n ingress-nginx get svc ingress-nginx-controller -o jsonpath='{.spec.clusterIP}')
-
-kubectl run smoketest --rm -i --restart=Never --image=curlimages/curl:latest -- sh -c "
-curl -sS -o /dev/null -w 'UI /            HTTP %{http_code}\n' -H 'Host: vss.${EXTERNAL_HOST}.nip.io'   --max-time 5 http://${NGINX_CIP}/
-curl -sS -o /dev/null -w 'VST /vst        HTTP %{http_code}\n' -H 'Host: vss.${EXTERNAL_HOST}.nip.io'   --max-time 5 http://${NGINX_CIP}/vst
-curl -sS -o /dev/null -w 'Kibana          HTTP %{http_code}\n' -H 'Host: kibana.vss.${EXTERNAL_HOST}.nip.io' --max-time 5 http://${NGINX_CIP}/
-"
-```
-
-Expected: UI = `200`, VST = `301`, Kibana = `302`. If those return 200/301/302 in-cluster but your laptop times out on the public IP, the cluster is fine but your network blocked this specific Azure IP. Fix per the note at the end of **Task 4** — reinstall ingress-nginx to get a different IP from the Azure pool.
+If a report references a different sensor, start a new chat with the correct
+sensor selected and repeat the request. Record the UI action, response, and
+relevant pod logs if a step fails. The report generation and artifact links
+were validated on the A100 deployment; browser upload should be confirmed in
+each workshop run.
 
 ---
 
 ## Cleanup
 
+Only clean up a dedicated workshop deployment after it is no longer needed.
+Do not run these commands against a shared cluster or resource group.
+
 ```bash
-# 1) VSS workload — NIMCache and PVCs have `helm.sh/resource-policy: keep`, so they survive helm uninstall.
-#    Delete them explicitly to free the 240+ GiB of model cache and namespace.
 helm uninstall "$RELEASE" -n "$NAMESPACE"
 kubectl delete nimcache --all -n "$NAMESPACE"
 kubectl delete pvc --all -n "$NAMESPACE"
-
-# 2) Ingress controller — uninstall releases the Azure Public IP (you won't get the same IP back).
-helm uninstall ingress-nginx -n ingress-nginx
-kubectl delete namespace "$NAMESPACE" ingress-nginx --ignore-not-found
-
-# 3) Full teardown — destroys AKS cluster, NGC secrets, the Azure LB IP, all PVCs/disks, everything in the RG.
-az group delete --name "$RESOURCE_GROUP" --yes --no-wait
+helm uninstall vss-haproxy -n vss-ingress
 ```
+
+The chart marks NIMCache resources to survive Helm uninstall; their PVCs
+remain until explicitly deleted. Removing the HAProxy Service also releases
+its dynamic public IP. If you created a dedicated AKS cluster in Task 2,
+remove that cluster separately after checking it contains no other workloads.

@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+controller:
+  kind: Deployment
+  service:
+    type: LoadBalancer
+    externalTrafficPolicy: Local
+    enablePorts:
+      http: true
+      https: true
+      quic: false
+      stat: false
+      admin: false
