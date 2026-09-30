@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# VSS v3.3.0rc0 LVS on four A100 80 GB GPUs. Apply the cache patch first.
+ngc:
+  createSecrets: false
+
+global:
+  storageClass: managed-csi-premium
+  externalScheme: http
+  externalPort: ""
+
+nims:
+  gpuType: OTHER
+  nemotron35:
+    # Use the A100-compatible INT4 profile for the cache and the NIMService.
+    cacheModelProfile: "2ef85c7286907e706eb0d6c4750a1aefa719447097d151ab34c7837fc02bdac4"
+
+# The workshop applies its browser ingress separately.
+vssIngress:
+  enabled: false
