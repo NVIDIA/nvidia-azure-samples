@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-FROM nvcr.io/nvidia/blueprint/aiq-agent:2.2.0
+FROM nvcr.io/nvidia/blueprint/aiq-agent:2.2.1
 
 # Upstream image is distroless: no /bin/sh, so RUN must use exec form.
 

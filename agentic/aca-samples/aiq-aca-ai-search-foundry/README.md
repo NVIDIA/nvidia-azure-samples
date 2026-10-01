@@ -117,12 +117,12 @@ export AISERVICES_NAME=$(read_out aiServicesName)
 ```bash
 az acr import \
   --name "$ACR_NAME" \
-  --source nvcr.io/nvidia/blueprint/aiq-frontend:2.2.0 \
-  --image aiq-frontend:2.2.0
+  --source nvcr.io/nvidia/blueprint/aiq-frontend:2.2.1 \
+  --image aiq-frontend:2.2.1
 
 az acr build \
   --registry "$ACR_NAME" \
-  --image aiq-agent:2.2.0-azure \
+  --image aiq-agent:2.2.1-azure \
   .
 ```
 
@@ -163,7 +163,7 @@ az containerapp create \
   --resource-group "$RG" \
   --name aiq-agent \
   --environment "$ACA_ENV" \
-  --image "${ACR_LOGIN}/aiq-agent:2.2.0-azure" \
+  --image "${ACR_LOGIN}/aiq-agent:2.2.1-azure" \
   --user-assigned "$UAMI_ID" \
   --registry-server "$ACR_LOGIN" \
   --registry-identity "$UAMI_ID" \
@@ -213,7 +213,7 @@ az containerapp create \
   --resource-group "$RG" \
   --name aiq-frontend \
   --environment "$ACA_ENV" \
-  --image "${ACR_LOGIN}/aiq-frontend:2.2.0" \
+  --image "${ACR_LOGIN}/aiq-frontend:2.2.1" \
   --user-assigned "$UAMI_ID" \
   --registry-server "$ACR_LOGIN" \
   --registry-identity "$UAMI_ID" \
@@ -263,7 +263,7 @@ az group delete --name "$RG" --yes --no-wait
 
 ## References
 
-- [NVIDIA AI-Q 2.2 documentation](https://docs.nvidia.com/aiq-blueprint/2.2.0/)
+- [NVIDIA AI-Q 2.2.1 documentation](https://docs.nvidia.com/aiq-blueprint/2.2.1/)
 - [Microsoft Foundry Managed Compute](https://learn.microsoft.com/azure/foundry/concepts/managed-compute-overview)
 - [Deploy open-source models with Managed Compute](https://learn.microsoft.com/azure/foundry/how-to/deploy-models-managed)
 - [Nemotron 3.5 Lightning](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4)
