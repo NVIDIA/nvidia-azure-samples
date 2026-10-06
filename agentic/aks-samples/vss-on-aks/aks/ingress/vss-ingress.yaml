@@ -1,84 +1,109 @@
-# Nginx-class Ingress for VSS LVS on AKS.
-# Edit the placeholders below (or substitute with `sed`) before applying.
-#
-# This deviates from the vss repo's vss-ingress-example.yaml in two ways:
-#   - ingressClassName: nginx (vs. haproxy) — AKS pattern uses ingress-nginx + LoadBalancer Service.
-#   - Annotations are nginx-flavored (proxy-body-size, timeouts) — needed for large video uploads
-#     and long-lived streaming/WebSocket connections.
-#
-# Paths only cover services that the LVS profile actually deploys.
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 
+# Browser routes validated with the VSS v3.3.0rc0 LVS profile.
+# Substitute <RELEASE_NAME>, <NAMESPACE>, and <EXTERNAL_HOST> before applying.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: <RELEASE_NAME>-vss-ingress
   namespace: <NAMESPACE>
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 2g
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    haproxy.org/timeout-client: 3600s
+    haproxy.org/timeout-server: 3600s
+    haproxy.org/path-rewrite: |
+      ^/storage/(.*) /vst/storage/\1
+      ^/storage /vst/storage
 spec:
-  ingressClassName: nginx
+  ingressClassName: haproxy
   rules:
   - host: vss.<EXTERNAL_HOST>.nip.io
     http:
       paths:
-      - backend:
+      - path: /api/chat
+        pathType: Prefix
+        backend:
           service:
-            name: <RELEASE_NAME>-vss-ui
+            name: vss-agent-ui
             port:
               number: 3000
-        path: /api/chat
+      - path: /api/agent
         pathType: Prefix
-      - backend:
+        backend:
           service:
-            name: <RELEASE_NAME>-vss-agent
+            name: vss-agent-ui
+            port:
+              number: 3000
+      - path: /api/vss-chat
+        pathType: Prefix
+        backend:
+          service:
+            name: vss-agent-ui
+            port:
+              number: 3000
+      - path: /api/proxy
+        pathType: Prefix
+        backend:
+          service:
+            name: vss-agent-ui
+            port:
+              number: 3000
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: vss-agent
             port:
               number: 8000
-        path: /api
+      - path: /chat
         pathType: Prefix
-      - backend:
+        backend:
           service:
-            name: <RELEASE_NAME>-vss-agent
+            name: vss-agent
             port:
               number: 8000
-        path: /chat
+      - path: /websocket
         pathType: Prefix
-      - backend:
+        backend:
           service:
-            name: <RELEASE_NAME>-vss-agent
+            name: vss-agent
             port:
               number: 8000
-        path: /websocket
+      - path: /static
         pathType: Prefix
-      - backend:
+        backend:
           service:
-            name: <RELEASE_NAME>-vss-agent
+            name: vss-agent
             port:
               number: 8000
-        path: /static
+      - path: /vst
         pathType: Prefix
-      - backend:
+        backend:
           service:
-            name: <RELEASE_NAME>-vst-ingress-dev
+            name: vss-vios-ingress
             port:
               number: 30888
-        path: /vst
+      - path: /storage
         pathType: Prefix
-      - backend:
+        backend:
           service:
-            name: <RELEASE_NAME>-vss-ui
+            name: vss-vios-ingress
+            port:
+              number: 30888
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: vss-agent-ui
             port:
               number: 3000
-        path: /
-        pathType: Prefix
   - host: kibana.vss.<EXTERNAL_HOST>.nip.io
     http:
       paths:
-      - backend:
+      - path: /
+        pathType: Prefix
+        backend:
           service:
-            name: <RELEASE_NAME>-kibana
+            name: kibana
             port:
               number: 5601
-        path: /
-        pathType: Prefix
