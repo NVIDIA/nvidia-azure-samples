@@ -1,6 +1,6 @@
-# NVIDIA AI-Q 2.2 on Azure Container Apps, Foundry, and Azure AI Search
+# NVIDIA AI-Q 2.2.1 on Azure Container Apps, Foundry, and Azure AI Search
 
-This sample deploys NVIDIA AI-Q 2.2 on Azure. AI-Q's native Azure AI Search
+This sample deploys NVIDIA AI-Q 2.2.1 on Azure. AI-Q's native Azure AI Search
 Knowledge Layer handles ingestion and retrieval; no sample-specific Search
 plugin is installed.
 
@@ -8,47 +8,37 @@ plugin is installed.
 
 | Role | Model | Hosting |
 | --- | --- | --- |
-| Intent classification, shallow research, summaries, final report writing | Nemotron 3.5 Lightning 30B-A3B NVFP4 v2 | Microsoft Foundry Managed Compute, one A100 |
-| Document embeddings (2,048 dimensions) | Nemotron 3 Embed 1B BF16 v1 | Microsoft Foundry Managed Compute, one A100 |
+| Intent classification, shallow research, summaries, final report writing | Nemotron 3.5 Lightning 30B-A3B v1 | Foundry Fireworks, Data Zone Standard pay-per-token |
+| Document embeddings (2,048 dimensions) | Nemotron 3 Embed 1B BF16 | NVIDIA hosted API |
 | Clarification and deep research | Nemotron 3 Ultra NVFP4 v1 | Foundry Fireworks, Data Zone Standard pay-per-token |
 
-Lightning and Embed use their official `azure-huggingface` catalog assets and
-Microsoft-managed deployment templates. Foundry owns the GPU topology, model
-weights, serving runtime, container image, and patching. All three models share
-one OpenAI-compatible Foundry endpoint.
+Lightning and Ultra use their official Fireworks catalog deployments. Embed
+uses its official hosted endpoint on build.nvidia.com. Fireworks chat models
+use the Foundry OpenAI endpoint; Embed uses NVIDIA's NIM API endpoint.
 
-AI-Q calls Foundry deployment names directly. A narrow compatibility hook in
-the agent image lets NAT 1.8 apply `/think` and `/no_think` to the Lightning
-deployment name. The same hook converts the native embedding client's NVIDIA
-`input_type` values to the `query:` and `passage:` prefixes expected by
-Foundry. No proxy or model-serving container is added.
+AI-Q calls Foundry deployment names directly. NAT's standard OpenAI provider
+sends Fireworks-native `reasoning_effort` for Lightning. AI-Q's standard
+NVIDIA embedding client sends native `query` and `passage` input types directly
+to the NVIDIA endpoint. No compatibility hook, proxy, or model-serving
+container is added.
 
 The AI-Q backend and frontend run on Azure Container Apps.
 PostgreSQL stores jobs, events, summaries, and checkpoints. Azure AI Search
 stores document chunks and vectors. Key Vault and managed identity provide
-secret and data-plane access.
+infrastructure secret and data-plane access. Each participant adds their
+NVIDIA API key as an encrypted Container Apps secret during backend deployment.
 
-Deep research enables AI-Q 2.2's built-in synthesis writer skill. It instructs
+Deep research enables AI-Q 2.2.1's built-in synthesis writer skill. It instructs
 the Lightning writer to publish the final Markdown report with exact verified
 source keys, preserving AI-Q's citation-integrity checks for native Search.
-The image also applies a narrow AI-Q 2.2 compatibility fix for URL-less sources:
-when AI-Q renders a verified document locator as `key: key`, verification checks
-the final key first and still requires it to exist in the captured registry.
-
-Fireworks on Foundry is a non-Microsoft service. Prompts and responses are
-shared with Fireworks and are outside the Microsoft EU Data Boundary. Review
-the [Fireworks on Foundry data terms](https://learn.microsoft.com/azure/foundry/how-to/fireworks/enable-fireworks-models)
-before deploying.
 
 ## Prerequisites
 
 - Azure CLI 2.60 or newer with the `containerapp` extension
-- `curl` and `jq` for endpoint checks
 - Permission to create resources and role assignments
-- Foundry Managed Compute A100 quota for two model instances
 - `Microsoft.CognitiveServices/Fireworks.EnableDeploy` registered
+- An NVIDIA API key from [build.nvidia.com](https://build.nvidia.com/)
 - A Tavily API key for web research
-- Bash
 
 ## 1. Create a resource group
 
@@ -75,20 +65,8 @@ az deployment group create \
 
 The sample resources remain in the resource-group region. The Foundry account
 defaults to East US because Fireworks `DataZoneStandard` is currently offered
-only in supported US regions. Managed Compute uses Foundry's Global deployment
-scope. Override `ultraLocation` if availability changes.
-
-The default Fireworks Ultra capacity is 100. Deep research runs concurrent
-model calls and was heavily throttled at capacity 10 during validation.
-Capacity 100 completed the workload; transient 429 responses can still occur
-and are retried by the configured client. Override `ultraCapacity` to tune
-throughput and potential pay-per-token spend.
-
-Provisioning the two Managed Compute models normally takes 10–20 minutes.
-The template generates the PostgreSQL administrator password and stores it in
-Key Vault. Re-running the deployment without supplying `pgAdminPassword`
-rotates that password; restart the backend afterward so it receives the new
-secret value.
+only in supported US regions. NVIDIA hosts the global embedding endpoint.
+Override `foundryLocation` if availability changes.
 
 Capture the outputs after deployment:
 
@@ -110,6 +88,8 @@ export UAMI_CLIENT_ID=$(read_out uamiClientId)
 export APPI_CONN_STR=$(read_out appiConnectionString)
 export FOUNDRY_ENDPOINT=$(read_out foundryEndpoint)
 export AISERVICES_NAME=$(read_out aiServicesName)
+export FOUNDRY_LIGHTNING_MODEL=$(read_out lightningDeploymentName)
+export FOUNDRY_ULTRA_MODEL=$(read_out ultraDeploymentName)
 ```
 
 ## 3. Build and import application images
@@ -126,38 +106,50 @@ az acr build \
   .
 ```
 
-## 4. Verify the official Foundry models
+## 4. Discover and verify model endpoints
+
+F### 1. Open your Foundry resource
+
+- Open [Microsoft Foundry](https://ai.azure.com) and sign in with your lab Azure account.
+
+- In the **All resources** table, click the resource with type **Foundry** to open its overview pane.
+
+### 2. Inspect the deployed models
+
+- Click **2 model deployments** to see the deployed models.
+
+- Confirm that `NemotronLightning` and `Nemotron3Ultra` are deployed. These names are already set in your backend configuration.
+
+- Return to the Foundry resource overview page.
+
+### 3. Copy the endpoint and API key
+
+- Expand **Endpoints and key** if needed, then copy the **Azure OpenAI endpoint**.
+
+- Copy the **API key** from the same section.
+
+
+### 4. Export the values in Azure Cloud Shell
+
+Return to your Azure Cloud Shell Bash session. Replace the placeholders below with the values you copied from Foundry.
 
 ```bash
-FOUNDRY_KEY=$(az cognitiveservices account keys list \
-  --resource-group "$RG" --name "$AISERVICES_NAME" \
-  --query key1 -o tsv)
+export FOUNDRY_ENDPOINT="<copied Azure OpenAI endpoint>"
+export FOUNDRY_API_KEY="<copied API key>"
 
-curl -fsS "${FOUNDRY_ENDPOINT}chat/completions" \
-  -H "Authorization: Bearer ${FOUNDRY_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"nemotron-3-5-lightning","messages":[{"role":"system","content":"/no_think"},{"role":"user","content":"Reply with ready."}],"max_tokens":256}' \
-  | jq '{model, content: .choices[0].message.content}'
-
-curl -fsS "${FOUNDRY_ENDPOINT}embeddings" \
-  -H "Authorization: Bearer ${FOUNDRY_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"nemotron-3-embed-1b","input":"query: Azure AI Search"}' \
-  | jq '{model, dimensions: (.data[0].embedding | length)}'
-
-curl -fsS "${FOUNDRY_ENDPOINT}chat/completions" \
-  -H "Authorization: Bearer ${FOUNDRY_KEY}" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"nemotron-3-ultra","messages":[{"role":"user","content":"Reply with ready."}],"max_tokens":32}' \
-  | jq '{model, content: .choices[0].message.content}'
-
-unset FOUNDRY_KEY
+export FOUNDRY_ENDPOINT="${FOUNDRY_ENDPOINT%/}"
+export FOUNDRY_ENDPOINT="${FOUNDRY_ENDPOINT%/openai/v1}/openai/v1"
 ```
+
+The last two lines normalize the endpoint to the OpenAI v1 base URL used by the backend. Both models use the same endpoint and API key.
 
 ## 5. Deploy the AI-Q backend
 
+Create or sign in to your account at [Tavily](https://app.tavily.com/sign-in) and obtain an API key. The next task prompts for it without displaying it. You also need your NVIDIA API key for document embeddings.
+
 ```bash
-export TAVILY_API_KEY="<TAVILY_API_KEY>"
+read -rsp "NVIDIA API key: " NVIDIA_API_KEY && echo
+read -rsp "Tavily API key: " TAVILY_API_KEY && echo
 
 az containerapp create \
   --resource-group "$RG" \
@@ -171,35 +163,41 @@ az containerapp create \
   --target-port 8000 \
   --transport http \
   --min-replicas 1 \
-  --max-replicas 3 \
+  --max-replicas 1 \
   --cpu 1.0 --memory 2.0Gi \
   --secrets \
     "postgres-password=keyvaultref:${KV_URI}secrets/postgres-password,identityref:${UAMI_ID}" \
-    "foundry-key=keyvaultref:${KV_URI}secrets/foundry-key,identityref:${UAMI_ID}" \
+    "tavily-api-key=$TAVILY_API_KEY" \
+    "foundry-key=$FOUNDRY_API_KEY" \
+    "nvidia-api-key=$NVIDIA_API_KEY" \
   --env-vars \
-    "TAVILY_API_KEY=$TAVILY_API_KEY" \
-    "POSTGRES_PASSWORD=secretref:postgres-password" \
+    "TAVILY_API_KEY=secretref:tavily-api-key" \
     "FOUNDRY_LIGHTNING_KEY=secretref:foundry-key" \
-    "NVIDIA_API_KEY=secretref:foundry-key" \
+    "NVIDIA_API_KEY=secretref:nvidia-api-key" \
     "FOUNDRY_ULTRA_KEY=secretref:foundry-key" \
     "PGSSLMODE=require" \
+    "POSTGRES_PASSWORD=secretref:postgres-password" \
     "NAT_JOB_STORE_DB_URL=postgresql+asyncpg://${PG_ADMIN}:\$(POSTGRES_PASSWORD)@${PG_HOST}:5432/${DB_JOBS}" \
     "AIQ_CHECKPOINT_DB=postgresql://${PG_ADMIN}:\$(POSTGRES_PASSWORD)@${PG_HOST}:5432/${DB_CHECKPOINTS}?sslmode=require" \
     "AIQ_SUMMARY_DB=postgresql+psycopg://${PG_ADMIN}:\$(POSTGRES_PASSWORD)@${PG_HOST}:5432/${DB_JOBS}?sslmode=require" \
     "AZURE_SEARCH_ENDPOINT=${SEARCH_ENDPOINT}" \
     "AZURE_CLIENT_ID=${UAMI_CLIENT_ID}" \
-    "AIQ_EMBED_BASE_URL=${FOUNDRY_ENDPOINT%/}" \
+    "AIQ_EMBED_BASE_URL=https://integrate.api.nvidia.com/v1" \
     "AIQ_EMBED_MODEL=nvidia/nemotron-3-embed-1b" \
     "AIQ_EMBED_DIM=2048" \
-    "AIQ_AZURE_SEARCH_INDEX_PREFIX=aiq" \
+    "AIQ_AZURE_SEARCH_INDEX_PREFIX=aiq221" \
     "FOUNDRY_ENDPOINT=${FOUNDRY_ENDPOINT%/}" \
     "CONFIG_FILE=/app/configs/config_web_azure.yml" \
     "APPLICATIONINSIGHTS_CONNECTION_STRING=${APPI_CONN_STR}" \
-    "LOG_LEVEL=INFO"
+    "LOG_LEVEL=WARNING"
 
 export AGENT_FQDN=$(az containerapp show -g "$RG" -n aiq-agent \
   --query properties.configuration.ingress.fqdn -o tsv)
 ```
+
+Check that the API starts and no model, database, credential, or Search initialization error appears. Startup alone does not prove ingestion or research works; Task 7 tests those paths. Press Ctrl+C to stop following logs.
+
+>+++az containerapp logs show -g "$RG" -n aiq-agent --follow --tail 100+++
 
 ## 6. Deploy the frontend
 
@@ -235,10 +233,12 @@ export FRONTEND_FQDN=$(az containerapp show -g "$RG" -n aiq-frontend \
 echo "Open: https://${FRONTEND_FQDN}"
 ```
 
+Open the displayed frontend URL.
+
 ## 7. Validate native Azure AI Search
 
 1. Upload a PDF, DOCX, TXT, or Markdown file in the frontend.
-2. Confirm an `aiq-*` index appears in Azure AI Search.
+2. Confirm an `aiq221-*` index appears in Azure AI Search.
 3. Ask a question answered only by that document and select Knowledge Base.
 4. Confirm the answer contains retrieved evidence and citations.
 5. Run a shallow request and confirm Lightning handles it.
@@ -252,10 +252,20 @@ az search service show -g "$RG" -n "$(read_out searchName)" \
   --query "{name:name,status:status}" -o json
 ```
 
+## Local validation
+
+```bash
+az bicep build --file main.bicep --outfile /tmp/aiq-sample.arm.json
+python3 -m unittest test_check_endpoints.py
+```
+
+The unit test checks model-name overrides, tool calling, embedding dimensions,
+and failure paths without network requests. Live checks in step 4 and the PDF
+exercise in step 7 remain required before publishing a workshop revision.
+
 ## Cleanup
 
-Managed Compute A100 deployments bill while running. Delete the resource group
-when you no longer need the sample:
+Delete the resource group when you no longer need the sample:
 
 ```bash
 az group delete --name "$RG" --yes --no-wait
@@ -264,8 +274,6 @@ az group delete --name "$RG" --yes --no-wait
 ## References
 
 - [NVIDIA AI-Q 2.2.1 documentation](https://docs.nvidia.com/aiq-blueprint/2.2.1/)
-- [Microsoft Foundry Managed Compute](https://learn.microsoft.com/azure/foundry/concepts/managed-compute-overview)
-- [Deploy open-source models with Managed Compute](https://learn.microsoft.com/azure/foundry/how-to/deploy-models-managed)
-- [Nemotron 3.5 Lightning](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4)
-- [Nemotron 3 Embed 1B](https://huggingface.co/nvidia/Nemotron-3-Embed-1B-BF16)
+- [Nemotron 3.5 Lightning on Fireworks](https://fireworks.ai/models/fireworks/nemotron-lightning-3p5-30b-a3b)
+- [Nemotron 3 Embed 1B API](https://docs.api.nvidia.com/nim/reference/nvidia-nemotron-3-embed-1b-infer)
 - [Fireworks models on Foundry](https://learn.microsoft.com/azure/foundry/how-to/fireworks/enable-fireworks-models)

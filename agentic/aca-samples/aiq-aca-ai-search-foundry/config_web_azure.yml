@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-# AI-Q 2.2 on Azure. The model split follows the upstream 2.2 web config:
+# AI-Q 2.2.1 on Azure. The model split follows the upstream 2.2.1 web config:
 # Lightning handles fast routing and shallow research; Ultra handles the
 # clarifier and deep-research roles. Azure AI Search uses AI-Q's native
 # knowledge-layer backend.
@@ -12,7 +12,7 @@ general:
     logging:
       console:
         _type: console
-        level: INFO
+        level: WARNING
 
   front_end:
     _type: aiq_api
@@ -35,7 +35,7 @@ general:
 llms:
   nemotron_lightning_intent_llm:
     _type: openai
-    model_name: nemotron-3-5-lightning
+    model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.1
@@ -43,11 +43,11 @@ llms:
     max_tokens: 1024
     max_retries: 5
     parallel_tool_calls: false
-    thinking: false
+    reasoning_effort: none
 
   nemotron_lightning_agent_llm:
     _type: openai
-    model_name: nemotron-3-5-lightning
+    model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.2
@@ -55,11 +55,11 @@ llms:
     max_tokens: 8192
     max_retries: 5
     parallel_tool_calls: false
-    thinking: true
+    reasoning_effort: medium
 
   nemotron_ultra_llm:
     _type: openai
-    model_name: nemotron-3-ultra
+    model_name: ${FOUNDRY_ULTRA_MODEL:-nemotron-3-ultra}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_ULTRA_KEY}
     temperature: 0.2
@@ -69,7 +69,7 @@ llms:
 
   nemotron_lightning_writer_llm:
     _type: openai
-    model_name: nemotron-3-5-lightning
+    model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.2
@@ -77,17 +77,17 @@ llms:
     max_tokens: 32768
     max_retries: 5
     parallel_tool_calls: false
-    thinking: false
+    reasoning_effort: none
 
   summary_llm:
     _type: openai
-    model_name: nemotron-3-5-lightning
+    model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.1
     max_tokens: 256
     max_retries: 5
-    thinking: false
+    reasoning_effort: none
 
 functions:
   data_sources:

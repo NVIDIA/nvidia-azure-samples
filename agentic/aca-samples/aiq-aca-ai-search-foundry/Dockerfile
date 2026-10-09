@@ -5,10 +5,9 @@ FROM nvcr.io/nvidia/blueprint/aiq-agent:2.2.1
 
 # Upstream image is distroless: no /bin/sh, so RUN must use exec form.
 
-# AI-Q 2.2 includes knowledge-layer[all], including the native Azure AI Search
+# AI-Q 2.2.1 includes knowledge-layer[all], including the native Azure AI Search
 # backend. Only the Azure-specific workflow configuration is added here.
 COPY config_web_azure.yml /app/configs/config_web_azure.yml
-COPY sitecustomize.py /app/.venv/lib/python3.13/site-packages/sitecustomize.py
 
 # NOTE: we deliberately do NOT override ENTRYPOINT or CMD. The upstream image
 # orchestrates dask-scheduler + dask-worker + nat serve via /app/deploy/entrypoint.py
