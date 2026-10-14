@@ -4,7 +4,7 @@
 # AI-Q 2.2.1 on Azure. The model split follows the upstream 2.2.1 web config:
 # Lightning handles fast routing and shallow research; Ultra handles the
 # clarifier and deep-research roles. Azure AI Search uses AI-Q's native
-# knowledge-layer backend.
+# knowledge-layer backend. Knowledge Base is the only research source.
 
 general:
   use_uvloop: true
@@ -93,27 +93,11 @@ functions:
   data_sources:
     _type: data_source_registry
     sources:
-      - id: web_search
-        name: "Web Search"
-        description: "Search the web for real-time information."
-        tools:
-          - web_search_tool
-          - advanced_web_search_tool
       - id: knowledge_layer
         name: "Knowledge Base"
         description: "Search uploaded documents and files in Azure AI Search."
         tools:
           - knowledge_search
-
-  web_search_tool:
-    _type: tavily_web_search
-    max_results: 5
-    max_content_length: 1000
-
-  advanced_web_search_tool:
-    _type: tavily_web_search
-    max_results: 2
-    advanced_search: true
 
   knowledge_search:
     _type: knowledge_retrieval
@@ -147,8 +131,6 @@ functions:
   shallow_research_agent:
     _type: shallow_research_agent
     llm: nemotron_lightning_agent_llm
-    exclude_tools:
-      - advanced_web_search_tool
     verbose: true
     max_llm_turns: 10
     max_tool_iterations: 5
@@ -162,8 +144,6 @@ functions:
     planner_llm: nemotron_ultra_llm
     writer_llm: nemotron_lightning_writer_llm
     skills: deep_research_skills
-    exclude_tools:
-      - web_search_tool
     verbose: true
 
 workflow:

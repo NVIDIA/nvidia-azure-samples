@@ -2,7 +2,8 @@
 
 This sample deploys NVIDIA AI-Q 2.2.1 on Azure. AI-Q's native Azure AI Search
 Knowledge Layer handles ingestion and retrieval; no sample-specific Search
-plugin is installed.
+plugin is installed. Research uses the uploaded documents through the
+Knowledge Base source.
 
 ## Architecture
 
@@ -38,7 +39,6 @@ source keys, preserving AI-Q's citation-integrity checks for native Search.
 - Permission to create resources and role assignments
 - `Microsoft.CognitiveServices/Fireworks.EnableDeploy` registered
 - An NVIDIA API key from [build.nvidia.com](https://build.nvidia.com/)
-- A Tavily API key for web research
 
 ## 1. Create a resource group
 
@@ -144,11 +144,12 @@ The last two lines normalize the endpoint to the OpenAI v1 base URL used by the 
 
 ## 5. Deploy the AI-Q backend
 
-Create or sign in to your account at [Tavily](https://app.tavily.com/sign-in) and obtain an API key. The next task prompts for it without displaying it. You also need your NVIDIA API key for document embeddings.
+Have your NVIDIA API key ready for document embeddings. The command below
+prompts for it without displaying it. Both chat models use the Foundry API key
+copied in step 4.
 
 ```bash
 read -rsp "NVIDIA API key: " NVIDIA_API_KEY && echo
-read -rsp "Tavily API key: " TAVILY_API_KEY && echo
 
 az containerapp create \
   --resource-group "$RG" \
@@ -166,11 +167,9 @@ az containerapp create \
   --cpu 1.0 --memory 2.0Gi \
   --secrets \
     "postgres-password=keyvaultref:${KV_URI}secrets/postgres-password,identityref:${UAMI_ID}" \
-    "tavily-api-key=$TAVILY_API_KEY" \
     "foundry-key=$FOUNDRY_API_KEY" \
     "nvidia-api-key=$NVIDIA_API_KEY" \
   --env-vars \
-    "TAVILY_API_KEY=secretref:tavily-api-key" \
     "FOUNDRY_LIGHTNING_KEY=secretref:foundry-key" \
     "NVIDIA_API_KEY=secretref:nvidia-api-key" \
     "FOUNDRY_ULTRA_KEY=secretref:foundry-key" \
@@ -236,12 +235,13 @@ Open the displayed frontend URL.
 
 ## 7. Validate native Azure AI Search
 
-1. Upload a PDF, DOCX, TXT, or Markdown file in the frontend.
+1. Upload a PDF, DOCX, TXT, or Markdown file in the frontend and wait for ingestion to finish.
 2. Confirm an `aiq221-*` index appears in Azure AI Search.
 3. Ask a question answered only by that document and select Knowledge Base.
 4. Confirm the answer contains retrieved evidence and citations.
 5. Run a shallow request and confirm Lightning handles it.
-6. Run a broad research request and confirm Ultra handles deep research.
+6. Run a detailed research request answerable from the uploaded documents and confirm Ultra handles deep research.
+7. Confirm the final report cites the uploaded documents. Knowledge Base is the only source in this sample.
 
 Useful diagnostics:
 
@@ -255,12 +255,11 @@ az search service show -g "$RG" -n "$(read_out searchName)" \
 
 ```bash
 az bicep build --file main.bicep --outfile /tmp/aiq-sample.arm.json
-python3 -m unittest test_check_endpoints.py
 ```
 
-The unit test checks model-name overrides, tool calling, embedding dimensions,
-and failure paths without network requests. Live checks in step 4 and the PDF
-exercise in step 7 remain required before publishing a workshop revision.
+Bicep compilation checks infrastructure syntax. Model endpoint checks in step 4
+and the document ingestion, retrieval, and deep-research exercises in step 7
+remain required before publishing a workshop revision.
 
 ## Cleanup
 
