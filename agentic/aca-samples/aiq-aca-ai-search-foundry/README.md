@@ -108,7 +108,7 @@ az acr build \
 
 ## 4. Discover and verify model endpoints
 
-F### 1. Open your Foundry resource
+### 1. Open your Foundry resource
 
 - Open [Microsoft Foundry](https://ai.azure.com) and sign in with your lab Azure account.
 
@@ -127,7 +127,6 @@ F### 1. Open your Foundry resource
 - Expand **Endpoints and key** if needed, then copy the **Azure OpenAI endpoint**.
 
 - Copy the **API key** from the same section.
-
 
 ### 4. Export the values in Azure Cloud Shell
 
