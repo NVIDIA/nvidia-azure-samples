@@ -20,6 +20,8 @@ to Foundry, where the token is validated.
 - Permission to pull from `anslutskycontainerappacr` and assign its `AcrPull`
   role to the lab managed identity
 - Local `curl` for testing the public lab endpoint
+- Python 3 with `pip` and virtual-environment support for the local Jupyter
+  exercise
 - A [region that supports Microsoft Foundry](https://learn.microsoft.com/azure/ai-foundry/reference/region-support)
 - Two deployed models that accept OpenAI-compatible Chat Completions requests
 
@@ -375,6 +377,108 @@ curl --fail --silent --show-error \
 
 curl --fail --silent --show-error \
   "https://${SWITCHYARD_FQDN}/v1/stats"
+```
+
+## Run the LangChain Business Example
+
+[`Switchyard_Client.ipynb`](Switchyard_Client.ipynb) builds a small customer
+request triage application with LangChain. It sends an incoming customer
+message to the public Switchyard route named `switchyard`, then produces a
+business brief containing:
+
+- A priority and explanation
+- The recommended owning team
+- A short issue summary
+- Recommended follow-up actions
+- A draft response to the customer
+
+The application uses LangChain's `ChatOpenAI` client because Switchyard exposes
+an OpenAI-compatible Chat Completions endpoint. The client points at
+`https://<SWITCHYARD_FQDN>/v1`, sends `model="switchyard"`, and supplies the
+participant's Microsoft Entra token as the bearer credential. Switchyard then
+chooses the efficient or capable Foundry deployment configured earlier in the
+lab.
+
+### Start Jupyter locally
+
+Use the same workstation terminal in which `az login` was run. Change to the
+sample directory and confirm the variables identifying the participant app are
+set. The notebook can resolve the FQDN itself, so exporting a token is not
+required.
+
+```bash
+cd inference/aca/switchyard_hol
+
+export RESOURCE_GROUP="rg-switchyard-hol"
+export SWITCHYARD_APP_NAME="switchyard-<PARTICIPANT_ID>"
+
+: "${RESOURCE_GROUP:?Set RESOURCE_GROUP first.}"
+: "${SWITCHYARD_APP_NAME:?Set SWITCHYARD_APP_NAME first.}"
+
+az containerapp show \
+  --name "$SWITCHYARD_APP_NAME" \
+  --resource-group "$RESOURCE_GROUP" \
+  --query properties.provisioningState \
+  --output tsv
+```
+
+Create an isolated Python environment and install JupyterLab. The repository's
+`.gitignore` excludes `.venv`, so the environment will not be committed.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+python -m pip install jupyterlab
+```
+
+Start JupyterLab on the workstation loopback interface. Keep this terminal
+open while using the notebook.
+
+```bash
+jupyter lab \
+  --ip=127.0.0.1 \
+  --no-browser \
+  Switchyard_Client.ipynb
+```
+
+Open the `http://127.0.0.1:.../lab?token=...` URL printed by JupyterLab. The
+token in this URL protects the local Jupyter service; do not share it. Keep the
+service bound to `127.0.0.1` rather than exposing it on `0.0.0.0`.
+
+### Run the notebook
+
+Open `Switchyard_Client.ipynb`, select the Python kernel from `.venv`, and run
+the cells from top to bottom:
+
+1. **Install the integration** installs `langchain-openai` into the active
+   notebook kernel with `%pip`.
+2. **Connect to the participant's Container App** reads `RESOURCE_GROUP` and
+   `SWITCHYARD_APP_NAME`, looks up the Container App FQDN, and obtains a
+   short-lived Foundry token using the current Azure CLI identity. The token is
+   deliberately not printed.
+3. **Verify the endpoint with curl** repeats the raw Chat Completions smoke
+   test from the previous section.
+4. **Build a LangChain customer-request triage app** creates a prompt, a
+   `ChatOpenAI` client, and the reusable `triage_customer_request` function.
+5. **Run the business app** submits the included Contoso Retail example and
+   renders the resulting business brief as Markdown.
+
+Edit the values in the final cell to test another customer, account tier,
+channel, or request. More complex requests may be routed differently depending
+on the Switchyard configuration and the available Foundry deployments.
+
+If a cell returns `401`, the Azure token has probably expired. Restart the
+notebook kernel and run all cells again to acquire a new token. If the setup
+cell cannot find Azure CLI or reports that authentication is required, stop
+JupyterLab, run `az login` in the terminal, and start it again.
+
+When finished, stop the local Jupyter service by pressing `Ctrl-C` in its
+terminal, confirm shutdown if prompted, and leave the virtual environment:
+
+```bash
+deactivate
 ```
 
 ### External-ingress security notice
