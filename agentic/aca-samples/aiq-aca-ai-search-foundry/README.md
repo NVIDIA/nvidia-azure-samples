@@ -17,9 +17,12 @@ Lightning and Ultra use their official Fireworks catalog deployments. Embed
 uses its official hosted endpoint on build.nvidia.com. Fireworks chat models
 use the Foundry OpenAI endpoint; Embed uses NVIDIA's NIM API endpoint.
 
-AI-Q calls Foundry deployment names directly. NAT's standard OpenAI provider
-sends Fireworks-native `reasoning_effort` for Lightning. AI-Q's standard
-NVIDIA embedding client sends native `query` and `passage` input types directly
+AI-Q calls Foundry deployment names directly through NAT's native NIM provider
+(`_type: nim`), which uses the NVIDIA client against the Foundry OpenAI endpoint.
+This avoids the OpenAI SDK metadata headers that caused HTTP 431 in testing and
+preserves Fireworks-native `reasoning_effort` for Lightning. The NIM provider uses
+its own retry handling; OpenAI-specific `max_retries` settings are omitted.
+AI-Q's standard NVIDIA embedding client sends native `query` and `passage` input types directly
 to the NVIDIA endpoint. No compatibility hook, proxy, or model-serving
 container is added.
 

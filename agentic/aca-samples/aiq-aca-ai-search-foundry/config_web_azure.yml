@@ -34,59 +34,54 @@ general:
 
 llms:
   nemotron_lightning_intent_llm:
-    _type: openai
+    _type: nim
     model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.1
     top_p: 0.9
     max_tokens: 1024
-    max_retries: 5
     parallel_tool_calls: false
     reasoning_effort: none
 
   nemotron_lightning_agent_llm:
-    _type: openai
+    _type: nim
     model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.2
     top_p: 0.7
     max_tokens: 8192
-    max_retries: 5
     parallel_tool_calls: false
     reasoning_effort: medium
 
   nemotron_ultra_llm:
-    _type: openai
+    _type: nim
     model_name: ${FOUNDRY_ULTRA_MODEL:-nemotron-3-ultra}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_ULTRA_KEY}
     temperature: 0.2
     top_p: 0.7
     max_tokens: 16384
-    max_retries: 10
 
   nemotron_lightning_writer_llm:
-    _type: openai
+    _type: nim
     model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.2
     top_p: 0.7
     max_tokens: 32768
-    max_retries: 5
     parallel_tool_calls: false
     reasoning_effort: none
 
   summary_llm:
-    _type: openai
+    _type: nim
     model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.1
     max_tokens: 256
-    max_retries: 5
     reasoning_effort: none
 
 functions:
