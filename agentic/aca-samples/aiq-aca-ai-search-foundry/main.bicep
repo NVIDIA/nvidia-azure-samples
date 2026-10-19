@@ -45,10 +45,10 @@ param postgresLocation string = location
 param deployModels bool = true
 
 @description('Lightning deployment name, also used by the application when calling shared models.')
-param lightningDeploymentName string = 'nemotron-3-5-lightning'
+param lightningDeploymentName string = 'NemotronLightning'
 
 @description('Ultra deployment name, also used by the application when calling shared models.')
-param ultraDeploymentName string = 'nemotron-3-ultra'
+param ultraDeploymentName string = 'Nemotron3Ultra'
 
 
 @description('Resource name prefix')

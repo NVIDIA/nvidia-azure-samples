@@ -176,6 +176,8 @@ az containerapp create \
     "FOUNDRY_LIGHTNING_KEY=secretref:foundry-key" \
     "NVIDIA_API_KEY=secretref:nvidia-api-key" \
     "FOUNDRY_ULTRA_KEY=secretref:foundry-key" \
+    "FOUNDRY_LIGHTNING_MODEL=${FOUNDRY_LIGHTNING_MODEL}" \
+    "FOUNDRY_ULTRA_MODEL=${FOUNDRY_ULTRA_MODEL}" \
     "PGSSLMODE=require" \
     "POSTGRES_PASSWORD=secretref:postgres-password" \
     "NAT_JOB_STORE_DB_URL=postgresql+asyncpg://${PG_ADMIN}:\$(POSTGRES_PASSWORD)@${PG_HOST}:5432/${DB_JOBS}" \

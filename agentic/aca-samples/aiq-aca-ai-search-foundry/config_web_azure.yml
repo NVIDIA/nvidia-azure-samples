@@ -35,7 +35,7 @@ general:
 llms:
   nemotron_lightning_intent_llm:
     _type: nim
-    model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
+    model_name: ${FOUNDRY_LIGHTNING_MODEL:-NemotronLightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.1
@@ -46,7 +46,7 @@ llms:
 
   nemotron_lightning_agent_llm:
     _type: nim
-    model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
+    model_name: ${FOUNDRY_LIGHTNING_MODEL:-NemotronLightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.2
@@ -57,7 +57,7 @@ llms:
 
   nemotron_ultra_llm:
     _type: nim
-    model_name: ${FOUNDRY_ULTRA_MODEL:-nemotron-3-ultra}
+    model_name: ${FOUNDRY_ULTRA_MODEL:-Nemotron3Ultra}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_ULTRA_KEY}
     temperature: 0.2
@@ -66,7 +66,7 @@ llms:
 
   nemotron_lightning_writer_llm:
     _type: nim
-    model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
+    model_name: ${FOUNDRY_LIGHTNING_MODEL:-NemotronLightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.2
@@ -77,7 +77,7 @@ llms:
 
   summary_llm:
     _type: nim
-    model_name: ${FOUNDRY_LIGHTNING_MODEL:-nemotron-3-5-lightning}
+    model_name: ${FOUNDRY_LIGHTNING_MODEL:-NemotronLightning}
     base_url: ${FOUNDRY_ENDPOINT}
     api_key: ${FOUNDRY_LIGHTNING_KEY}
     temperature: 0.1
