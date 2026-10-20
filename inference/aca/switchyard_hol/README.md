@@ -535,44 +535,60 @@ an `api_key` argument, so the notebook uses the non-secret placeholder
 authenticate clients. Switchyard ignores the client's placeholder and uses
 its ACA secret for the selected efficient or capable Foundry deployment.
 
-### Start Jupyter locally
+### Start Jupyter in Windows PowerShell
 
-On your workstation, change to the directory containing
-`Switchyard_Client.ipynb`. Replace the path below with its absolute path on
-your workstation; the ACR build commands left your terminal in the temporary
-Switchyard source directory.
+Open **Windows PowerShell** on your Skillable Windows VM or workstation with
+Python 3.10 or later (including the `py` launcher) and `curl.exe` installed.
+The Azure deployment commands remain in your Bash terminal; the commands in
+this section run in PowerShell.
 
-```bash
-cd "<ABSOLUTE_PATH_TO_NVIDIA_AZURE_SAMPLES>/inference/aca/switchyard_hol"
+Change to the directory containing `Switchyard_Client.ipynb`. Replace the
+example path with your local repository path:
+
+```powershell
+Set-Location "C:\path\to\nvidia-azure-samples\inference\aca\switchyard_hol"
 ```
 
-Set `SWITCHYARD_FQDN` in this terminal using your app's public hostname.
-No Foundry key or Azure CLI token is needed by the notebook.
+Set the environment variable in this PowerShell window using the app hostname
+printed by the Bash test. Enter only the hostname, without `https://` or `/v1`.
+Jupyter and its Python kernel inherit this value. No Foundry key or Azure CLI
+token is needed by the notebook.
 
-```bash
-: "${SWITCHYARD_FQDN:?Set the Container App hostname first.}"
-echo "$SWITCHYARD_FQDN"
+```powershell
+$env:SWITCHYARD_FQDN = "<YOUR_CONTAINER_APP_HOSTNAME>"
 ```
 
-Create an isolated Python environment and install JupyterLab. The repository's
-`.gitignore` excludes `.venv`, so the environment will not be committed.
+Optional validation:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-
-python -m pip install --upgrade pip
-python -m pip install jupyterlab
+```powershell
+Write-Output $env:SWITCHYARD_FQDN
 ```
 
-Start JupyterLab on the workstation loopback interface. Keep this terminal
-open while using the notebook.
+Create an isolated Python environment and install JupyterLab and its Python
+kernel. The repository's `.gitignore` excludes `.venv`. These commands call
+the environment's Python executable directly, so activation is not required.
+See [Python virtual environments](https://docs.python.org/3/library/venv.html#how-venvs-work).
 
-```bash
-jupyter lab \
-  --ip=127.0.0.1 \
-  --no-browser \
-  Switchyard_Client.ipynb
+```powershell
+py -3 -m venv .venv
+```
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install jupyterlab ipykernel
+```
+
+Register a named kernel inside `.venv` for this lab:
+
+```powershell
+.\.venv\Scripts\python.exe -m ipykernel install --sys-prefix --name switchyard-hol --display-name "Switchyard HoL (.venv)"
+```
+
+Start JupyterLab on the workstation loopback interface from the same PowerShell
+window. Keep this window open while using the notebook.
+
+```powershell
+.\.venv\Scripts\python.exe -m jupyterlab --ip=127.0.0.1 --no-browser Switchyard_Client.ipynb
 ```
 
 Open the `http://127.0.0.1:.../lab?token=...` URL printed by JupyterLab. The
@@ -581,15 +597,16 @@ service bound to `127.0.0.1` rather than exposing it on `0.0.0.0`.
 
 ### Run the notebook
 
-Open `Switchyard_Client.ipynb`, select the Python kernel from `.venv`, and run
-the cells from top to bottom:
+Open `Switchyard_Client.ipynb`, select **Switchyard HoL (.venv)** as the kernel,
+and run the cells from top to bottom:
 
 1. **Install the integration** installs `langchain-openai` into the active
    notebook kernel with `%pip`.
 2. **Connect to your Container App** reads the hostname from `SWITCHYARD_FQDN`,
    or looks it up using `RESOURCE_GROUP` and `SWITCHYARD_APP_NAME`. It does not
    read or request a Foundry key.
-3. **Verify the endpoint with curl** sends a raw Chat Completions smoke test.
+3. **Verify the endpoint with curl** sends a raw Chat Completions smoke test
+   from Python using `curl.exe` on Windows. No Bash shell is required.
 4. **Build a LangChain customer-request triage app** creates a prompt, a
    `ChatOpenAI` client, and the reusable `triage_customer_request` function.
 5. **Run the business app** submits the included Contoso Retail example and
@@ -601,12 +618,9 @@ on the Switchyard configuration and the available Foundry deployments.
 
 ## Clean Up
 
-Shut down the notebook kernel, stop Jupyter with `Ctrl-C` in its terminal,
-and leave the virtual environment:
-
-```bash
-deactivate
-```
+Shut down the notebook kernel and stop Jupyter with `Ctrl-C` in its PowerShell
+window. The virtual environment was used directly, so no deactivation step is
+needed.
 
 Delete the public app promptly when finished, even if Skillable will later
 remove the environment. Deleting the app also removes its stored copy of the
