@@ -11,8 +11,10 @@ param location string = resourceGroup().location
 @maxLength(45)
 param namePrefix string = 'switchyard'
 
-@description('Disable key-based authentication and require Microsoft Entra ID authentication.')
-param disableLocalAuth bool = true
+@description('Globally unique ACR name containing only letters and numbers.')
+@minLength(5)
+@maxLength(50)
+param registryName string = 'switchyard${uniqueString(resourceGroup().id)}'
 
 @description('Number of days to retain Container Apps logs in Log Analytics.')
 @minValue(30)
@@ -27,20 +29,27 @@ param tags object = {
 }
 
 var suffix = uniqueString(resourceGroup().id)
-var foundryName = toLower('${namePrefix}-${suffix}')
-var projectName = '${namePrefix}-project'
 var containerAppsEnvironmentName = take(toLower('${namePrefix}-aca-env-${suffix}'), 60)
 var logAnalyticsWorkspaceName = take(toLower('${namePrefix}-logs-${suffix}'), 63)
-var containerAppIdentityName = take(toLower('${namePrefix}-aca-identity-${suffix}'), 128)
-var foundryUserRoleId = subscriptionResourceId(
-  'Microsoft.Authorization/roleDefinitions',
-  '53ca6127-db72-4b80-b1b0-d745d6d5456d'
-)
 
-resource containerAppIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: containerAppIdentityName
+resource registry 'Microsoft.ContainerRegistry/registries@2025-05-01-preview' = {
+  name: registryName
   location: location
   tags: tags
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    adminUserEnabled: true
+    anonymousPullEnabled: false
+    publicNetworkAccess: 'Enabled'
+    roleAssignmentMode: 'LegacyRegistryPermissions'
+    policies: {
+      azureADAuthenticationAsArmPolicy: {
+        status: 'enabled'
+      }
+    }
+  }
 }
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -76,60 +85,11 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2025-07-01'
   }
 }
 
-resource foundry 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
-  name: foundryName
-  location: location
-  tags: tags
-  identity: {
-    type: 'SystemAssigned'
-  }
-  kind: 'AIServices'
-  sku: {
-    name: 'S0'
-  }
-  properties: {
-    allowProjectManagement: true
-    customSubDomainName: foundryName
-    disableLocalAuth: disableLocalAuth
-    publicNetworkAccess: 'Enabled'
-  }
-}
-
-resource containerAppFoundryUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(foundry.id, containerAppIdentity.id, foundryUserRoleId)
-  scope: foundry
-  properties: {
-    principalId: containerAppIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: foundryUserRoleId
-  }
-}
-
-resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
-  name: projectName
-  parent: foundry
-  location: location
-  tags: tags
-  identity: {
-    type: 'SystemAssigned'
-  }
-  properties: {
-    displayName: 'Switchyard HOL'
-    description: 'Microsoft Foundry project for the Switchyard hands-on lab.'
-  }
-}
-
-output foundryName string = foundry.name
-output foundryResourceId string = foundry.id
-output projectName string = project.name
-output projectResourceId string = project.id
-output projectEndpoint string = 'https://${foundry.name}.services.ai.azure.com/api/projects/${project.name}'
 output containerAppsEnvironmentName string = containerAppsEnvironment.name
 output containerAppsEnvironmentResourceId string = containerAppsEnvironment.id
 output logAnalyticsWorkspaceName string = logAnalyticsWorkspace.name
 output logAnalyticsWorkspaceResourceId string = logAnalyticsWorkspace.id
 output logAnalyticsWorkspaceCustomerId string = logAnalyticsWorkspace.properties.customerId
-output containerAppIdentityName string = containerAppIdentity.name
-output containerAppIdentityResourceId string = containerAppIdentity.id
-output containerAppIdentityClientId string = containerAppIdentity.properties.clientId
-output containerAppIdentityPrincipalId string = containerAppIdentity.properties.principalId
+output registryName string = registry.name
+output registryLoginServer string = registry.properties.loginServer
+output registryResourceId string = registry.id
