@@ -1,0 +1,63 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Provision a Basic Switchyard lab registry with admin credentials for image access.",
+    "copyright": "Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.",
+    "license": "Apache-2.0"
+  },
+  "parameters": {
+    "registryName": {
+      "type": "string",
+      "defaultValue": "[concat('switchyard', uniqueString(resourceGroup().id))]",
+      "minLength": 5,
+      "maxLength": 50,
+      "metadata": {
+        "description": "Globally unique ACR name containing only letters and numbers."
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    }
+  },
+  "variables": {
+    "registryId": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('registryName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2025-05-01-preview",
+      "name": "[parameters('registryName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "adminUserEnabled": true,
+        "anonymousPullEnabled": false,
+        "publicNetworkAccess": "Enabled",
+        "roleAssignmentMode": "LegacyRegistryPermissions",
+        "policies": {
+          "azureADAuthenticationAsArmPolicy": {
+            "status": "enabled"
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "registryName": {
+      "type": "string",
+      "value": "[parameters('registryName')]"
+    },
+    "registryLoginServer": {
+      "type": "string",
+      "value": "[reference(variables('registryId'), '2025-05-01-preview').loginServer]"
+    },
+    "registryResourceId": {
+      "type": "string",
+      "value": "[variables('registryId')]"
+    }
+  }
+}
