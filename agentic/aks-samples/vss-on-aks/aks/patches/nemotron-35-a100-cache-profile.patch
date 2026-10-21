@@ -1,0 +1,18 @@
+diff --git a/deploy/helm/services/nims/charts/nemotron-3.5-lightning-30b-a3b/templates/nim-cache.yaml b/deploy/helm/services/nims/charts/nemotron-3.5-lightning-30b-a3b/templates/nim-cache.yaml
+index 944e1c0..da8abc9 100644
+--- a/deploy/helm/services/nims/charts/nemotron-3.5-lightning-30b-a3b/templates/nim-cache.yaml
++++ b/deploy/helm/services/nims/charts/nemotron-3.5-lightning-30b-a3b/templates/nim-cache.yaml
+@@ -24,8 +24,13 @@ spec:
+       pullSecret: {{ .Values.global.pullSecretName | quote }}
+       authSecret: {{ .Values.global.authSecretName | quote }}
+       model:
++        {{- if .Values.cacheModelProfile }}
++        profiles:
++          - {{ .Values.cacheModelProfile | quote }}
++        {{- else }}
+         engine: "vllm"
+         tensorParallelism: {{ index .Values.resources.limits "nvidia.com/gpu" | default "1" | quote }}
++        {{- end }}
+   storage:
+     pvc:
+       storageClass: {{ include "nemotron35.storageClass" . | quote }}
