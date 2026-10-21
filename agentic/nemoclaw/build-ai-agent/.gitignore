@@ -1,0 +1,17 @@
+.lab-state
+artifacts/
+.DS_Store
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
+*.token
+kubeconfig
+kubeconfig-*
+*.kubeconfig
+infra/main.json
+infra/main.parameters.json
+__pycache__/
+*.py[cod]

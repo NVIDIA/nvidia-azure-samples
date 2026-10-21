@@ -9,6 +9,7 @@ repos:
         args: [--fix=lf]
       - id: check-merge-conflict
       - id: check-yaml
+        args: [--allow-multiple-documents]
 
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.22.1

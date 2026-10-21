@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Validate Skillable setup
+
+on:
+  push:
+    paths:
+      - 'infra/**'
+      - 'tests/**'
+      - 'apps/**'
+      - 'assets/**'
+      - '.github/workflows/validate-skillable.yml'
+  pull_request:
+    paths:
+      - 'infra/**'
+      - 'tests/**'
+      - 'apps/**'
+      - 'assets/**'
+      - '.github/workflows/validate-skillable.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Verify bundled setup sources
+        run: python3 infra/build-template.py --check
+      - name: Prepare pinned OpenClaw MCP SDK for transport verification
+        run: npm install --prefix "$RUNNER_TEMP/ignite-mcp-sdk" --ignore-scripts --no-audit --no-fund @modelcontextprotocol/sdk@1.30.0
+      - name: Prepare real kubectl for load-balancer readiness verification
+        run: |
+          mkdir -p "$RUNNER_TEMP/ignite-kubectl"
+          curl --fail --location --silent --show-error --retry 3 --max-time 60 \
+            https://dl.k8s.io/release/v1.34.1/bin/linux/amd64/kubectl \
+            --output "$RUNNER_TEMP/ignite-kubectl/kubectl"
+          curl --fail --location --silent --show-error --retry 3 --max-time 60 \
+            https://dl.k8s.io/release/v1.34.1/bin/linux/amd64/kubectl.sha256 \
+            --output "$RUNNER_TEMP/ignite-kubectl/kubectl.sha256"
+          python3 - <<'PY'
+          import hashlib, os
+          from pathlib import Path
+          folder = Path(os.environ['RUNNER_TEMP']) / 'ignite-kubectl'
+          expected = (folder / 'kubectl.sha256').read_text().strip()
+          actual = hashlib.sha256((folder / 'kubectl').read_bytes()).hexdigest()
+          if actual != expected:
+              raise SystemExit('kubectl checksum mismatch')
+          PY
+          chmod 700 "$RUNNER_TEMP/ignite-kubectl/kubectl"
+          echo "$RUNNER_TEMP/ignite-kubectl" >> "$GITHUB_PATH"
+      - name: Compile Bicep and author parameter file
+        env:
+          IGNITE_LAB_VM_PASSWORD: 'synthetic-validation-only'
+          IGNITE_LAB_INSTANCE_ID: 'ci-validation'
+        run: |
+          az bicep install --version v0.48.1
+          az bicep build --file infra/main.bicep --outfile "$RUNNER_TEMP/main.json"
+          az bicep build-params --file infra/main.bicepparam --outfile "$RUNNER_TEMP/main.parameters.json"
+      - name: Run local contract and HTTPS broker tests
+        env:
+          IGNITE_COMPILED_TEMPLATE: ${{ runner.temp }}/main.json
+          IGNITE_MCP_SDK_ROOT: ${{ runner.temp }}/ignite-mcp-sdk
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
