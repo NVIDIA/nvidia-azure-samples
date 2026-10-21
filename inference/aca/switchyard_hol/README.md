@@ -44,30 +44,20 @@ az extension add --name containerapp --upgrade
 ## Identify the Azure Resources
 
 This workflow expects the Foundry account, Container Apps environment, and ACR
-to exist. Start by listing the Foundry accounts available in your lab:
+to exist. The commands select the first item (`[0]`) returned by each Azure
+resource list, which is assumed to be the correct resource in your Skillable
+lab subscription. Run the command blocks as written. For deployment, you only
+enter the Foundry API key and the efficient and capable model deployment
+names; resource names, credentials, and endpoints are discovered
+automatically, and app and image names are generated for you. For the local
+Jupyter exercise, copy the discovered app hostname into PowerShell.
+
+Select the first Foundry account and retrieve its resource group:
 
 ```bash
-az cognitiveservices account list \
-  --query "[].{name:name,resourceGroup:resourceGroup,location:location,kind:kind}" \
-  --output table
-```
-
-Set the Foundry account name:
-
-```bash
-export FOUNDRY_NAME="<FOUNDRY_ACCOUNT_NAME>"
-```
-
-Retrieve its resource group:
-
-```bash
-export RESOURCE_GROUP="$(az cognitiveservices account list --query "[?name=='${FOUNDRY_NAME}'] | [0].resourceGroup" --output tsv)"
-```
-
-Confirm that the account was found:
-
-```bash
-: "${FOUNDRY_NAME:?Set the Foundry account name.}"
+export FOUNDRY_NAME="$(az cognitiveservices account list --query '[0].name' --output tsv)"
+export RESOURCE_GROUP="$(az cognitiveservices account list --query '[0].resourceGroup' --output tsv)"
+: "${FOUNDRY_NAME:?Could not find a Foundry account.}"
 : "${RESOURCE_GROUP:?Could not find the Foundry resource group.}"
 echo "Foundry account: $FOUNDRY_NAME"
 echo "Resource group: $RESOURCE_GROUP"
@@ -78,8 +68,8 @@ echo "Resource group: $RESOURCE_GROUP"
 Use the Foundry resource already installed in your Skillable environment.
 
 1. Open **Azure Portal** from Skillable's Resources panel.
-2. Open your lab resource group and select the Foundry account whose name you
-   set in `FOUNDRY_NAME`, for example `myfoundry...`.
+2. Open your lab resource group and select the Foundry account whose name
+   was discovered in `FOUNDRY_NAME`, for example `myfoundry...`.
 3. In the resource menu, open **Resource Management → Keys and Endpoint**
    (the label can also appear as **Keys and Endpoints**).
 4. Copy **KEY 1** or **KEY 2**. Either key can authenticate requests.
@@ -99,15 +89,11 @@ read -r -s -p "Paste your Foundry API key and press Enter: " AZURE_AI_API_KEY
 ```
 
 Export the value for the deployment commands. It will be stored in an ACA
-secret, not in the notebook or routing TOML:
+secret, not in the notebook or routing TOML. Confirm it is present without
+displaying it:
 
 ```bash
 export AZURE_AI_API_KEY
-```
-
-Confirm a value is present without displaying it:
-
-```bash
 : "${AZURE_AI_API_KEY:?Foundry API key is empty.}"
 echo "Foundry API key is set."
 ```
@@ -119,99 +105,43 @@ you will clear the local key variable afterward.
 
 ### Find Your Container Apps Environment
 
-List the Container Apps environments across the current subscription. The
+Select the first Container Apps environment in the current subscription. The
 environment might be in a different resource group from the Foundry account.
-Run each command separately.
 
 ```bash
-az containerapp env list --query "[].{name:name,resourceGroup:resourceGroup,location:location,id:id}" --output json
-```
-
-Choose the `name` of the environment assigned to your lab:
-
-```bash
-export CONTAINER_APPS_ENVIRONMENT="<CONTAINER_APPS_ENVIRONMENT_NAME>"
-```
-
-Optional validation:
-
-```bash
-echo "$CONTAINER_APPS_ENVIRONMENT"
-```
-
-Retrieve its full resource ID:
-
-```bash
-export CONTAINER_APPS_ENVIRONMENT_ID="$(az containerapp env list --query "[?name=='${CONTAINER_APPS_ENVIRONMENT}'] | [0].id" --output tsv)"
-```
-
-Optional validation:
-
-```bash
-echo "$CONTAINER_APPS_ENVIRONMENT_ID"
-```
-
-Confirm that the lookup returned a value:
-
-```bash
+export CONTAINER_APPS_ENVIRONMENT="$(az containerapp env list --query '[0].name' --output tsv)"
+export CONTAINER_APPS_ENVIRONMENT_ID="$(az containerapp env list --query '[0].id' --output tsv)"
+: "${CONTAINER_APPS_ENVIRONMENT:?Could not find a Container Apps environment.}"
 : "${CONTAINER_APPS_ENVIRONMENT_ID:?Could not resolve the Container Apps environment ID.}"
-echo "Container Apps environment successfully resolved."
+echo "$CONTAINER_APPS_ENVIRONMENT"
+echo "$CONTAINER_APPS_ENVIRONMENT_ID"
 ```
 
 ## Configure Your Switchyard App
 
 Run the following commands from your Bash terminal, not from inside a Container
-App shell. Choose a short identifier for your app using only
-lowercase letters, numbers, and hyphens. Because the `switchyard-` prefix uses
-11 characters and Container App names must be fewer than 32 characters, your
-identifier can contain at most 20 characters. Choose an identifier that is
-unique within the Container Apps environment.
+App shell. Generate a timestamp and random suffix for your app and image tag;
+you do not need to choose an identifier.
 
 ```bash
-export PARTICIPANT_ID="<YOUR_SHORT_UNIQUE_ID>"
-```
-
-```bash
+export PARTICIPANT_ID="$(date -u +%y%m%d%H%M%S)-${RANDOM}"
 export SWITCHYARD_APP_NAME="switchyard-${PARTICIPANT_ID}"
 
 : "${RESOURCE_GROUP:?Set RESOURCE_GROUP first.}"
 : "${CONTAINER_APPS_ENVIRONMENT_ID:?Set the Container Apps environment ID.}"
-: "${PARTICIPANT_ID:?Set PARTICIPANT_ID first.}"
-: "${SWITCHYARD_APP_NAME:?Could not construct the Container App name.}"
-
-if [[ ! "$SWITCHYARD_APP_NAME" =~ ^[a-z][a-z0-9-]{0,30}$ ]] || \
-   [[ "$SWITCHYARD_APP_NAME" == *--* ]] || \
-   [[ "$SWITCHYARD_APP_NAME" == *- ]]; then
-  echo "Invalid Container App name: $SWITCHYARD_APP_NAME" >&2
-else
-  echo "Container App name: $SWITCHYARD_APP_NAME"
-fi
+echo "Container App name: $SWITCHYARD_APP_NAME"
 ```
 
 ### Build Your Switchyard Image
 
-Run these commands in Bash. List the registries available in the current
-subscription:
+Select the first ACR in the current subscription and resolve its login server:
 
 ```bash
-az acr list --query "[].{name:name,resourceGroup:resourceGroup,loginServer:loginServer}" --output table
-```
-
-Set the target registry name:
-
-```bash
-export SWITCHYARD_REGISTRY_NAME="<ACR_NAME>"
-```
-
-Resolve its login server. Use a tag containing your identifier so your build
-does not overwrite another learner's image.
-
-```bash
+export SWITCHYARD_REGISTRY_NAME="$(az acr list --query '[0].name' --output tsv)"
+: "${SWITCHYARD_REGISTRY_NAME:?Could not find an ACR.}"
 export SWITCHYARD_REGISTRY="$(az acr show --name "$SWITCHYARD_REGISTRY_NAME" --query loginServer --output tsv)"
-```
-
-```bash
 : "${SWITCHYARD_REGISTRY:?Could not resolve the ACR login server.}"
+echo "Registry: $SWITCHYARD_REGISTRY"
 ```
 
 #### Read Your ACR Credentials
@@ -219,24 +149,12 @@ export SWITCHYARD_REGISTRY="$(az acr show --name "$SWITCHYARD_REGISTRY_NAME" --q
 Container Apps uses the registry admin username and password to pull your
 image. These are separate from the Foundry API key.
 
-In Azure Portal, open your ACR resource and select **Settings → Access keys**.
-The lab provisioning enables **Admin user**. The page shows the username and
-two passwords.
-
-The following commands load the same credentials into environment variables
-without printing the password. Run each command separately:
+The lab provisioning enables the registry's admin account. Retrieve its
+credentials automatically without printing the password:
 
 ```bash
 export SWITCHYARD_REGISTRY_USERNAME="$(az acr credential show --name "$SWITCHYARD_REGISTRY_NAME" --query username --output tsv)"
-```
-
-```bash
 export SWITCHYARD_REGISTRY_PASSWORD="$(az acr credential show --name "$SWITCHYARD_REGISTRY_NAME" --query "passwords[0].value" --output tsv)"
-```
-
-Confirm that both values are present:
-
-```bash
 : "${SWITCHYARD_REGISTRY_USERNAME:?Could not read the ACR username.}"
 : "${SWITCHYARD_REGISTRY_PASSWORD:?Could not read the ACR password.}"
 echo "Registry credentials are loaded."
@@ -266,7 +184,7 @@ git clone --branch v0.3.0 --single-branch https://github.com/NVIDIA-NeMo/Switchy
 git -C "$SWITCHYARD_BUILD_DIR" checkout --detach "$SWITCHYARD_SOURCE_REF"
 ```
 
-Tag the image with your participant identifier:
+Tag the image with your automatically generated participant identifier:
 
 ```bash
 : "${PARTICIPANT_ID:?Set PARTICIPANT_ID first.}"
@@ -319,13 +237,15 @@ az cognitiveservices account deployment list \
   --output table
 ```
 
-Set the OpenAI-compatible base URL and the deployment names shown in the
-`deployment` column. Use deployment names, not model catalog names. Do not
-append `/chat/completions` to the base URL.
+The OpenAI-compatible base URL is generated from the discovered account name:
 
 ```bash
 export FOUNDRY_OPENAI_BASE_URL="https://${FOUNDRY_NAME}.openai.azure.com/openai/v1"
 ```
+
+Enter the efficient and capable model deployment names from the `deployment`
+column. These are the only resource selections you enter manually. Use
+deployment names, not model catalog names.
 
 ```bash
 export EFFICIENT_MODEL_DEPLOYMENT="<EFFICIENT_MODEL_DEPLOYMENT_NAME>"
@@ -464,31 +384,16 @@ unset AZURE_AI_API_KEY
 
 ## Test Your Switchyard App
 
-You can test the public endpoint from Cloud Shell or your workstation. In
-your deployment terminal, retrieve the app's public hostname:
+Run this test in your Bash deployment terminal. Retrieve the app's public
+hostname automatically:
 
 ```bash
 export SWITCHYARD_FQDN="$(az containerapp show --name "$SWITCHYARD_APP_NAME" --resource-group "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn --output tsv)"
-```
-
-Optional validation in the deployment terminal:
-
-```bash
+: "${SWITCHYARD_FQDN:?Container App FQDN is empty.}"
 echo "$SWITCHYARD_FQDN"
 ```
 
-Only if curl runs in another workstation terminal, copy the hostname there
-using this separate export; otherwise, keep the value already resolved above:
-
-```bash
-export SWITCHYARD_FQDN="<YOUR_CONTAINER_APP_HOSTNAME_WITHOUT_HTTPS_PREFIX>"
-```
-
-Confirm that the hostname is present:
-
-```bash
-: "${SWITCHYARD_FQDN:?Container App FQDN is empty.}"
-```
+Keep the printed hostname for the local PowerShell Jupyter setup below.
 
 The request deliberately has **no Authorization header**. The lab endpoint
 is public and unauthenticated; Switchyard supplies its own stored Foundry key
@@ -538,24 +443,32 @@ its ACA secret for the selected efficient or capable Foundry deployment.
 ### Start Jupyter in Windows PowerShell
 
 Open **Windows PowerShell** on your Skillable Windows VM or workstation with
-Python 3.10 or later (including the `py` launcher) and `curl.exe` installed.
-The Azure deployment commands remain in your Bash terminal; the commands in
-this section run in PowerShell.
+Git, Python 3.10 or later (including the `py` launcher), and `curl.exe` installed.
+Azure CLI and Azure sign-in are not needed on this Windows machine. The
+deployment commands remain in Cloud Shell Bash; the commands in this section
+run in local PowerShell.
 
-Change to the directory containing `Switchyard_Client.ipynb`. Replace the
-example path with your local repository path:
+Clone the [NVIDIA Azure samples repository](https://github.com/NVIDIA/nvidia-azure-samples)
+from the folder where you want to keep your lab files:
 
 ```powershell
-Set-Location "C:\path\to\nvidia-azure-samples\inference\aca\switchyard_hol"
+git clone https://github.com/NVIDIA/nvidia-azure-samples.git
+Set-Location .\nvidia-azure-samples
+git switch switchyard_hol
+Set-Location .\inference\aca\switchyard_hol
 ```
 
-Set the environment variable in this PowerShell window using the app hostname
-printed by the Bash test. Enter only the hostname, without `https://` or `/v1`.
-Jupyter and its Python kernel inherit this value. No Foundry key or Azure CLI
-token is needed by the notebook.
+The clone commands switch to `switchyard_hol` and enter the lab directory.
+Use it as the working directory for all remaining PowerShell commands.
+
+In Cloud Shell, copy the hostname printed by `echo "$SWITCHYARD_FQDN"` in
+**Test Your Switchyard App**. Paste that hostname between the quotes below in
+your local PowerShell window. Copy only the hostname, without `https://` or
+`/v1`. Jupyter and its Python kernel inherit this environment variable; do not
+copy the Foundry API key.
 
 ```powershell
-$env:SWITCHYARD_FQDN = "<YOUR_CONTAINER_APP_HOSTNAME>"
+$env:SWITCHYARD_FQDN = "<SWITCHYARD_FQDN_FROM_CLOUD_SHELL>"
 ```
 
 Optional validation:
@@ -602,9 +515,9 @@ and run the cells from top to bottom:
 
 1. **Install the integration** installs `langchain-openai` into the active
    notebook kernel with `%pip`.
-2. **Connect to your Container App** reads the hostname from `SWITCHYARD_FQDN`,
-   or looks it up using `RESOURCE_GROUP` and `SWITCHYARD_APP_NAME`. It does not
-   read or request a Foundry key.
+2. **Connect to your Container App** reads the hostname from the
+   `SWITCHYARD_FQDN` environment variable set in PowerShell. It does not read
+   or request a Foundry key.
 3. **Verify the endpoint with curl** sends a raw Chat Completions smoke test
    from Python using `curl.exe` on Windows. No Bash shell is required.
 4. **Build a LangChain customer-request triage app** creates a prompt, a

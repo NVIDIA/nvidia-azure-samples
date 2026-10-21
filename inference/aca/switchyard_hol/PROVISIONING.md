@@ -48,6 +48,13 @@ registry image access; it does not authorize submitting Azure Resource Manager
 build requests. Learners use the active Azure CLI session provided by
 Skillable for those management operations.
 
+Provide Azure CLI already authenticated to the lab subscription in the Bash
+deployment terminal. Learners copy the discovered app hostname from Cloud
+Shell into local PowerShell for Jupyter; the Windows machine does not need
+Azure CLI or an Azure sign-in. The walkthrough selects the first listed
+Foundry account, Container Apps environment, and ACR, so it assumes those are
+the intended resources in the isolated lab subscription.
+
 The template never accepts or outputs Foundry keys or registry passwords.
 Learners load credentials into their terminal session when needed and should
 not save credentials in source files or notebook outputs. Enabling the ACR
