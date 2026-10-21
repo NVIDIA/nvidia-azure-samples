@@ -454,7 +454,6 @@ from the folder where you want to keep your lab files:
 ```powershell
 git clone https://github.com/NVIDIA/nvidia-azure-samples.git
 Set-Location .\nvidia-azure-samples
-git switch switchyard_hol
 Set-Location .\inference\aca\switchyard_hol
 ```
 
