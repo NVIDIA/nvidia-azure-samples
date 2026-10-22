@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+agent-framework-foundry==1.15.0
+azure-ai-projects==2.7.0
+azure-identity==1.26.0
+ipykernel==7.4.0

@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+langchain-azure-ai[opentelemetry]==1.2.3
+azure-ai-projects==2.9.0
+azure-identity==1.26.0
+ipykernel==7.4.0

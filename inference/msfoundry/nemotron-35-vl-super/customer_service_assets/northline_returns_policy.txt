@@ -1,0 +1,17 @@
+# Northline Audio — Returns Policy, version 2026-08-01
+
+Illustrative company policy for a fictional customer-service demo. This is not a real merchant policy.
+
+## Standard returns
+
+Customers may request a standard return within 30 calendar days after the carrier's recorded delivery date. The day after delivery is day 1. Standard returns require the product and all included accessories. Opened headphones are not eligible for a preference-based standard return. Standard-return shipping is paid by the customer. A standard return is not approved until the returns team verifies the item and order.
+
+## Suspected defective products
+
+A customer who reports a product defect may start a defect review within 45 calendar days after the carrier's recorded delivery date. The day after delivery is day 1. This exception applies to opened headphones. A report of a problem starts a review; it is not proof of a confirmed defect. The support team must perform the product-specific troubleshooting steps before authorizing a return merchandise authorization (RMA).
+
+If support confirms the defect and issues an RMA, Northline provides a prepaid return label and waives any restocking fee. The product and included accessories must be returned. After the returns team receives and verifies the item, the refund goes to the original payment method. Do not promise an immediate refund or create an RMA without the required support review.
+
+## Order evidence and conflicts
+
+Use the order's recorded delivery date to calculate the window, not the order date. A customer-submitted form can establish what the customer reported, but does not establish that the defect is confirmed or that all accessories are physically present. If an order record conflicts with a support record, ask a human specialist to reconcile it before deciding eligibility.

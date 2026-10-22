@@ -66,7 +66,10 @@ Samples are organized by use case:
   [`inference/aca/nemotron_asr/`](./inference/aca/nemotron_asr/) for NVIDIA
   Nemotron ASR Streaming NIM on Azure Container Apps and
   [`inference/aca/switchyard_hol/`](./inference/aca/switchyard_hol/) for the
-  Microsoft Foundry Switchyard hands-on lab.
+  Microsoft Foundry Switchyard hands-on lab. The
+  [`inference/msfoundry/nemotron-35-vl-super/`](./inference/msfoundry/nemotron-35-vl-super/)
+  sample shows NVIDIA Nemotron 3.5 Super VL with Microsoft Foundry agents,
+  image reasoning, and policy search.
 - [`training/`](./training) - Model training samples.
 - [`data-processing/`](./data-processing) - Data processing samples.
 - [`physical-ai/`](./physical-ai) - Physical AI samples.
