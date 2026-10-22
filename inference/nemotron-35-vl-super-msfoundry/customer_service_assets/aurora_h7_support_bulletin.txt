@@ -1,0 +1,15 @@
+# Northline Audio — Aurora H7 No-Audio Support Bulletin, version 2026-09-02
+
+Illustrative internal support bulletin for a fictional customer-service demo. Applies to SKU AH7-BLK, Aurora H7 wireless headphones.
+
+## Symptom: right earcup has no audio
+
+1. Confirm the headset is charged and the source device's left/right audio balance is centered.
+2. Hold Power and Volume Down for 10 seconds to reset the headset, then pair it again.
+3. In the Northline Audio app, update Aurora H7 firmware to version 2.4.1 or later, then test both channels with a second source device.
+
+If audio is still absent after these steps, record the results and escalate to the support team for defect confirmation and an RMA decision. Customer statements that a reset was attempted do not establish that the balance, firmware, and second-device checks are complete. The agent may suggest these steps and offer escalation; it must not say a hardware defect is confirmed.
+
+## Coordination with returns policy
+
+This bulletin describes product troubleshooting only. The Northline Audio Returns Policy controls the 30-day standard window, the 45-day suspected-defect review window, shipping, fees, and refund timing. Do not infer policy terms from this bulletin.
