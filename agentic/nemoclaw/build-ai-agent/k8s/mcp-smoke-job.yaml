@@ -1,0 +1,79 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mcp-incluster-smoke
+  namespace: nooa-admission-test
+  labels:
+    app.kubernetes.io/part-of: ignite-nemoclaw-lab
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mcp-incluster-smoke
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/os: linux
+        kubernetes.io/arch: amd64
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: client
+          image: python:3.12-slim@sha256:78387bc3881b8273120a12ebe6c1ab22b018ccc2c9adf565ae1ac9b536e184ea
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/test/mcp_smoke.py"]
+          args:
+            - --url
+            - https://aks-ops-mcp.nooa-admission-test.svc:8443/mcp
+            - --ca
+            - /ca/ca.crt
+            - --token-file
+            - /auth/token
+            - guardrails
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 150m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: client-code
+              mountPath: /test
+              readOnly: true
+            - name: ca
+              mountPath: /ca
+              readOnly: true
+            - name: auth
+              mountPath: /auth
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: client-code
+          configMap:
+            name: lab-mcp-client-code
+        - name: ca
+          configMap:
+            name: aks-ops-mcp-ca
+        - name: auth
+          secret:
+            secretName: aks-ops-mcp-auth
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi

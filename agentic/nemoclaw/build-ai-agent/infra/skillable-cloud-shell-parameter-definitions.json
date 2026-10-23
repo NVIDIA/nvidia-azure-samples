@@ -1,0 +1,46 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmAdminPassword": {
+      "type": "securestring"
+    },
+    "vmAdminUsername": {
+      "type": "string"
+    },
+    "labInstanceId": {
+      "type": "string"
+    },
+    "allowAzureCloudSsh": {
+      "type": "bool"
+    },
+    "deployLabSetup": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "preinstallAgent": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "inferenceEndpoint": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "inferenceModel": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "foundryAccountName": {
+      "type": "string",
+      "defaultValue": "[concat('myfoundry', parameters('labInstanceId'))]"
+    },
+    "inferenceApiKey": {
+      "type": "securestring",
+      "defaultValue": ""
+    },
+    "inferenceAuthHeader": {
+      "type": "string",
+      "defaultValue": "Authorization"
+    }
+  }
+}

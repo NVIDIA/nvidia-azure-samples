@@ -61,7 +61,8 @@ Samples are organized by use case:
 - [`agentic/`](./agentic) - Agentic AI samples and reference workflows,
   including [`agentic/aks-samples/vss-on-aks/`](./agentic/aks-samples/vss-on-aks/)
   for NVIDIA Video Search and Summarization (VSS) on Azure Kubernetes Service
-  (AKS).
+  (AKS), and [`agentic/nemoclaw/build-ai-agent/`](./agentic/nemoclaw/build-ai-agent/)
+  for building a governed NemoClaw operations agent with Microsoft Foundry and AKS.
 - [`inference/`](./inference) - Model inference samples, including
   [`inference/aca/nemotron_asr/`](./inference/aca/nemotron_asr/) for NVIDIA
   Nemotron ASR Streaming NIM on Azure Container Apps and

@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# The selectors intentionally match no pods during public-IP allocation.
+# Attach real selectors only after TLS has been issued for both assigned IPs.
+apiVersion: v1
+kind: Service
+metadata:
+  name: aks-ops-mcp-public
+  namespace: nooa-admission-test
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - 192.0.2.10/32
+  selector:
+    ignite.nvidia.com/public-endpoint-ready: "false"
+  ports:
+    - name: https
+      port: 8443
+      targetPort: 8443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-inference-public
+  namespace: nooa-admission-test
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - 192.0.2.10/32
+  selector:
+    ignite.nvidia.com/public-endpoint-ready: "false"
+  ports:
+    - name: https
+      port: 8000
+      targetPort: 8000

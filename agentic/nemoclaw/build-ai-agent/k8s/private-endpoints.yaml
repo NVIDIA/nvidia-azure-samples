@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: aks-ops-mcp-private
+  namespace: nooa-admission-test
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - 172.18.0.5/32
+  selector:
+    app.kubernetes.io/name: aks-ops-mcp
+  ports:
+    - name: https
+      port: 8443
+      targetPort: https
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-inference-private
+  namespace: nooa-admission-test
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - 172.18.0.5/32
+  selector:
+    app.kubernetes.io/name: mock-inference
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
