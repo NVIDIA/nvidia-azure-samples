@@ -1,0 +1,17 @@
+[Unit]
+Description=Switchyard router for Cursor
+After=network-online.target nemotron35-lightning-vllm.service
+Wants=network-online.target
+Requires=nemotron35-lightning-vllm.service
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/switchyard/env
+Environment=RUST_LOG=switchyard_server=debug,libsy=debug
+ExecStart=%h/.cargo/bin/switchyard-server --config %h/.config/switchyard/routes.toml --host 0.0.0.0 --port 4000 --routing-log-file %h/.config/switchyard/routing.log
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+
+[Install]
+WantedBy=default.target

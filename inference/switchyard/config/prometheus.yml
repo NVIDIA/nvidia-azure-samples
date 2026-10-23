@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  external_labels:
+    source: dgx-spark
+    instance: dgx-spark
+    service: switchyard
+
+scrape_configs:
+  - job_name: switchyard
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["127.0.0.1:4000"]
+
+# Optional remote_write for Azure Monitor or another Prometheus backend.
+# Fill this in for the target environment before enabling remote writes.
+#
+# remote_write:
+#   - url: "https://metrics-ingest.example.com/api/v1/write"
+#     azuread:
+#       cloud: AzurePublic
+#       managed_identity: {}
+#     write_relabel_configs:
+#       - source_labels: [__name__]
+#         regex: "switchyard_.*|up|scrape_duration_seconds|scrape_samples_scraped|scrape_samples_post_metric_relabeling"
+#         action: keep

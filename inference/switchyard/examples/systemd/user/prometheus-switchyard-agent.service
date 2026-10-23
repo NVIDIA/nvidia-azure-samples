@@ -1,0 +1,16 @@
+[Unit]
+Description=Prometheus agent for Switchyard metrics
+After=network-online.target switchyard-cursor.service
+Wants=network-online.target
+Requires=switchyard-cursor.service
+
+[Service]
+Type=simple
+Environment=IMDS_ENDPOINT=http://localhost:40342
+Environment=IDENTITY_ENDPOINT=http://localhost:40342/metadata/identity/oauth2/token
+ExecStart=%h/.local/bin/prometheus --config.file=%h/.config/prometheus/prometheus.yml --agent --storage.agent.path=%h/.local/state/prometheus-agent --web.listen-address=127.0.0.1:9095
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

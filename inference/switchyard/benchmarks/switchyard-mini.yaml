@@ -1,0 +1,15 @@
+model:
+  model_name: "openai/switchyard/smart"
+  cost_tracking: "ignore_errors"
+  model_kwargs:
+    api_base: "http://127.0.0.1:4000/v1"
+    api_key: "EMPTY"
+    drop_params: true
+    max_completion_tokens: 4096
+
+environment:
+  pull_timeout: 900
+  run_args:
+    - "--platform"
+    - "linux/amd64"
+    - "--rm"
