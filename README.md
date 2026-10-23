@@ -58,19 +58,25 @@ to get help.
 
 Samples are organized by use case:
 
-- [`agentic/`](./agentic) - Agentic AI samples and reference workflows,
-  including [`agentic/aks-samples/vss-on-aks/`](./agentic/aks-samples/vss-on-aks/)
-  for NVIDIA Video Search and Summarization (VSS) on Azure Kubernetes Service
-  (AKS), and [`agentic/nemoclaw/build-ai-agent/`](./agentic/nemoclaw/build-ai-agent/)
-  for building a governed NemoClaw operations agent with Microsoft Foundry and AKS.
-- [`inference/`](./inference) - Model inference samples, including
-  [`inference/aca/nemotron_asr/`](./inference/aca/nemotron_asr/) for NVIDIA
-  Nemotron ASR Streaming NIM on Azure Container Apps and
-  [`inference/aca/switchyard_hol/`](./inference/aca/switchyard_hol/) for the
-  Microsoft Foundry Switchyard hands-on lab. The
-  [`inference/msfoundry/nemotron-35-vl-super/`](./inference/msfoundry/nemotron-35-vl-super/)
-  sample shows NVIDIA Nemotron 3.5 Super VL with Microsoft Foundry agents,
-  image reasoning, and policy search.
+- [`agentic/`](./agentic) - Agentic AI samples and reference workflows:
+  - [`agentic/aks-samples/vss-on-aks/`](./agentic/aks-samples/vss-on-aks/)
+    deploys NVIDIA Video Search and Summarization (VSS) on Azure Kubernetes
+    Service (AKS).
+  - [`agentic/aca-samples/aiq-aca-ai-search-foundry/`](./agentic/aca-samples/aiq-aca-ai-search-foundry/)
+    is an AI-Q research-agent workshop using Azure Container Apps, Microsoft
+    Foundry, and Azure AI Search.
+  - [`agentic/nemoclaw/build-ai-agent/`](./agentic/nemoclaw/build-ai-agent/)
+    builds a governed NemoClaw operations agent with Microsoft Foundry and AKS.
+- [`inference/`](./inference) - Model inference samples and hands-on labs:
+  - [`inference/aca/nemotron_asr/`](./inference/aca/nemotron_asr/) deploys
+    NVIDIA Nemotron ASR Streaming NIM on Azure Container Apps.
+  - [`inference/aca/switchyard_hol/`](./inference/aca/switchyard_hol/) is the
+    Microsoft Foundry Switchyard hands-on lab.
+  - [`inference/msfoundry/nemotron-35-vl-super/`](./inference/msfoundry/nemotron-35-vl-super/)
+    shows NVIDIA Nemotron 3.5 Super VL with Microsoft Foundry agents, image
+    reasoning, and policy search.
+  - [`inference/switchyard/`](./inference/switchyard/) provides DGX Spark
+    Switchyard routing, authentication, observability, and benchmark examples.
 - [`training/`](./training) - Model training samples.
 - [`data-processing/`](./data-processing) - Data processing samples.
 - [`physical-ai/`](./physical-ai) - Physical AI samples.
