@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Camera grid scan preview (11x5)</title>
+<style>
+body { margin: 0; background: #111; color: #eee; font-family: system-ui, sans-serif; }
+.bar { padding: 10px 12px; font-size: 14px; background: #1d1f24; }
+img { display: block; width: 100vw; height: auto; }
+</style>
+<div class="bar">Camera grid scan preview (11x5) &middot; /home/anslutsky/Dev/nvidia-azure-samples/demos/azure_local/dgx_spark/camera_ops/grid_scan_preview.jpg</div>
+<img id="grid" alt="Camera grid scan preview">
+<script>
+const imagePath = "grid_scan_preview.jpg";
+const img = document.getElementById('grid');
+function refresh() { img.src = imagePath + '?t=' + Date.now(); }
+refresh();
+setInterval(refresh, 1000);
+</script>

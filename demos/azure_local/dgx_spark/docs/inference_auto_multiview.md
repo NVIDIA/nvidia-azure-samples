@@ -1,0 +1,65 @@
+# Auto Multiview Inference Guide
+
+## Prerequisites
+
+1. Follow the [Setup guide](setup.md) for environment setup, checkpoint download and hardware requirements.
+
+## (Exploratory) Using Less GPUs
+
+The number of GPUs (context parallel size) must be **greater than or equal to the number of active views** in your spec.
+An active view is any camera entry that supplies a `control_path` (e.g., `front_wide`, `rear_left`, etc.).
+The default sample spec enables seven views, so it runs on seven GPUs.
+If you reduce the views in your JSON spec, you can run on fewer GPUs.
+Adjust `--nproc_per_node` (or total world size) accordingly before running the commands below.
+
+
+## Examples
+
+Multiview requires 8 GPUs
+
+Run multiview2world:
+
+```bash
+torchrun --nproc_per_node=8 --master_port=12341 examples/multiview.py -i assets/multiview_example/multiview_spec.json -o outputs/multiview/
+```
+
+By default, the output is a single concatenated video containing all views side-by-side. Set `"save_combined_views": false` in the params JSON to instead save individual MP4 files for each camera view, plus a 3x3 tiled grid video combining all views.
+
+
+For an explanation of all the available parameters run:
+```bash
+python examples/multiview.py --help
+
+python examples/multiview.py control:view-config --help # for information specific to view configuration
+```
+
+Run autoregressive multiview (for generating longer videos):
+
+```bash
+torchrun --nproc_per_node=8 --master_port=12341 -m examples.multiview -i assets/multiview_example/multiview_autoregressive_spec.json -o outputs/multiview_autoregressive
+```
+
+## End to End Multiview Example
+
+Complete workflow from 3D scene annotations to multiview video output. Scene annotations (object positions, camera calibration, vehicle trajectory) are rendered into world scenario videos that condition the multiview generation. This example uses only rendered control videos, not raw footage.
+
+**Step 1: Download example data and generate world scenario videos**
+
+See the [Complete Example](world_scenario_video_generation.md#complete-example) section in the World Scenario Video Generation guide for detailed instructions:
+
+```bash exclude=true
+# Download example data
+wget -P assets https://github.com/nvidia-cosmos/cosmos-dependencies/releases/download/assets/multiview_example1.zip && unzip -oq assets/multiview_example1.zip -d assets
+```
+
+**Step 2: Generate world scenario videos**
+```bash exclude=true
+# See world_scenario_video_generation.md for detailed instructions
+python scripts/generate_control_videos.py -i assets/multiview_example1/scene_annotations -o outputs/multiview_example1_world_scenario_videos
+```
+
+**Step 3: Run inference on the generated world scenario videos**
+```bash exclude=true
+# Run inference (num_conditional_frames=0 since we're not using raw footage)
+torchrun --nproc_per_node=8 --master_port=12341 -m examples.multiview -i assets/multiview_example1/multiview_spec.json -o outputs/multiview_e2w/
+```

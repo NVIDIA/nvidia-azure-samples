@@ -1,0 +1,334 @@
+schema_version: 1
+ledger_policy:
+  mode: append_only
+  rule: >-
+    Never delete a historical decision. A reversal adds a new decision whose
+    supersedes list names the old ID; then the old entry may be marked superseded.
+  authority: latest_explicit_user_instruction_then_current_code_and_tests
+generated_at: "2026-07-01T20:42:06-04:00"
+baseline_commit: 535a4c9d325a4f948b8d7877a6882ddbd74af8a4
+baseline_commit_scope: local_pre_sanitization_provenance_not_clean_PR_ancestry
+scope: demos/azure_local/dgx_spark
+
+decisions:
+  - id: D-HANDOFF-001
+    status: active
+    decision: preserve_agent_context_as_entrypoint_narrative_and_append_only_ledger
+    invariants:
+      - AGENTS_md_is_portable_mandatory_entrypoint
+      - AI_HANDOFF_md_contains_current_behavior_and_operational_context
+      - decision_ledger_retains_superseded_approaches_and_reasons
+      - architecture_changes_update_handoff_and_ledger_with_code_and_tests
+      - ledger_IDs_and_references_are_validated_by_test
+    anchors:
+      code:
+        - AGENTS.md
+        - AI_HANDOFF.md
+        - SKILL.md
+        - docs/ai-decision-ledger.yaml
+      tests: [tests/test_ai_handoff.py]
+
+  - id: D-PROMPT-001
+    status: superseded
+    decision: server_and_wifi_share_one_system_prompt_file
+    superseded_by: [D-PROMPT-002]
+    do_not_reintroduce: true
+    provenance_threads: [019f1936-f3e9-7093-a248-6d35d7abecaa]
+
+  - id: D-PROMPT-002
+    status: active
+    supersedes: [D-PROMPT-001]
+    decision: server_and_wifi_use_independent_lane_prompt_files
+    invariants:
+      - webcam-nemotron-server-system-prompt.json_is_server_authority
+      - webcam-nemotron-wifi-system-prompt.json_is_wifi_authority
+      - worker_selects_prompt_from_source_mode
+    anchors:
+      code:
+        - scripts/webcam_stream_server.py:nemotron_system_prompt_path
+        - scripts/nemotron_voicechat_pipeline.py:configured_nemotron_system_prompt
+      tests: [tests/test_system_prompt_persistence.py]
+    provenance_threads: [019f1936-f3e9-7093-a248-6d35d7abecaa]
+
+  - id: D-PROMPT-003
+    status: superseded
+    decision: browser_or_request_state_may_reconcile_into_prompt_files
+    superseded_by: [D-PROMPT-004]
+    do_not_reintroduce: true
+
+  - id: D-PROMPT-004
+    status: active
+    supersedes: [D-PROMPT-003]
+    decision: only_explicit_save_may_write_lane_prompt_files
+    invariants:
+      - startup_and_restart_are_read_only
+      - retry_after_disconnect_is_read_only
+      - browser_local_state_cannot_overwrite_files
+      - manual_or_queued_requests_cannot_persist_prompt_overrides
+      - unsaved_edits_are_not_replaced_by_retry
+      - whitespace_and_trailing_newlines_round_trip
+      - maximum_prompt_length_is_3000_characters
+    anchors:
+      code:
+        - scripts/webcam_stream_server.py:write_nemotron_system_prompt
+        - scripts/nemotron_voicechat_pipeline.py:configured_nemotron_system_prompt
+      tests:
+        - tests/test_system_prompt_persistence.py
+        - tests/test_voicechat_fast_dialog.py
+    provenance_threads: [019f1936-f3e9-7093-a248-6d35d7abecaa]
+
+  - id: D-TIME-001
+    status: superseded
+    decision: current_time_publisher_writes_directly_to_conversation_history
+    superseded_by: [D-TIME-002]
+    failure_mode: visible_notification_did_not_trigger_nemotron
+    do_not_reintroduce: true
+
+  - id: D-TIME-002
+    status: active
+    supersedes: [D-TIME-001]
+    decision: current_time_events_use_normal_lane_input_queue
+    invariants:
+      - flow_is_publisher_to_lane_queue_to_worker_to_nemotron_response
+      - one_durable_input_turn_per_event
+      - attribution_is_user_side_Time_service_not_Nemotron
+      - only_running_lane_workers_are_routable
+      - default_sources_is_server_only
+      - each_enabled_lane_redraws_independent_uniform_60_to_300_second_delay
+    anchors:
+      code:
+        - scripts/webcam_stream_server.py:current_time_routable_sources
+        - scripts/webcam_stream_server.py:draw_current_time_skill_next_at
+        - scripts/nemotron_voicechat_pipeline.py:process_manual_text_request
+      tests: [tests/test_current_time_skill_publisher.py]
+    provenance_threads:
+      - 019f191e-ee44-7fe2-9531-2b9f5ac10281
+      - 019f200d-d97e-7bb3-972e-8a67baba6cd8
+
+  - id: D-SERVICE-001
+    status: active
+    decision: service_inputs_remain_visible_even_if_suppressed_or_unanswered
+    invariants:
+      - journal_before_queue_suppression_except_Time_service_dedup_path
+      - preserve_unique_notification_identity
+      - raw_payload_is_collapsible_and_collapsed_by_default
+      - never_filter_all_technical_service_turns_from_human_dialog
+    anchors:
+      tests: [tests/test_current_time_skill_publisher.py]
+    provenance_threads: [019f191e-ee44-7fe2-9531-2b9f5ac10281]
+
+  - id: D-FOCUS-001
+    status: superseded
+    decision: autofocus_completion_uses_dedicated_historyless_deepstream_agent
+    superseded_by: [D-FOCUS-002]
+    failure_mode: event_commentary_bypassed_lane_history_and_normal_agent_pipeline
+    do_not_reintroduce: true
+
+  - id: D-FOCUS-002
+    status: active
+    supersedes: [D-FOCUS-001]
+    decision: autofocus_completion_uses_normal_wifi_lane_queue
+    invariants:
+      - retain_wifi_lane_history_and_environment_context
+      - ground_visual_claims_in_new_crop
+      - generic_detector_chatter_remains_suppressed
+      - deepstream-nemotron_is_absent_from_default_service_registry
+    anchors:
+      code:
+        - scripts/webcam_background_stack.py:build_services
+        - scripts/nemotron_voicechat_pipeline.py:process_manual_text_request
+      tests:
+        - tests/test_deepstream_focus_routing.py
+        - tests/test_nemotron_omni_migration.py
+    provenance_threads: [019f18af-e9c6-7b43-99c9-d76349af696c]
+
+  - id: D-ROUTE-001
+    status: superseded
+    decision: repair_missing_web_search_query_with_deterministic_runtime_synthesis
+    superseded_by: [D-ROUTE-002]
+    rejection_reason: user_required_AI_contracts_only_and_no_deterministic_hacks
+    do_not_reintroduce: true
+
+  - id: D-ROUTE-002
+    status: active
+    supersedes: [D-ROUTE-001]
+    decision: ordinary_tool_argument_correctness_is_defined_by_model_contract
+    invariants:
+      - web_search_requires_nonempty_query
+      - timestamp_news_query_must_include_complete_YYYY_MM_DD
+      - no_generic_query_synthesis_rewriting_or_argument_repair
+      - decisive_policy_and_input_appear_early_under_constrained_context
+    anchors:
+      code:
+        - scripts/tool_planner_config.py
+        - scripts/nemotron_voice_responder.py:tool_planner_prompt
+      tests:
+        - tests/test_tool_planner_template.py
+        - tests/test_voicechat_fast_dialog.py
+    provenance_threads:
+      - 019f191e-ee44-7fe2-9531-2b9f5ac10281
+      - 019f1969-ce5c-7782-a7d0-bca302a7d6fa
+
+  - id: D-ROUTE-006
+    status: active
+    scope: trusted_service_policy_camera_video_only
+    relationship_to_D_ROUTE_002: narrow_later_exception_not_general_reversal
+    decision: enforce_explicit_N_second_camera_video_directive_from_lane_policy
+    rationale: >-
+      Omni repeatedly chose current_snapshot, current_time only, or no tool and
+      then fabricated visual descriptions. The user authorized code that makes
+      the existing Wi-Fi prompt enforceable but prohibited creating other prompts.
+    invariants:
+      - directive_must_explicitly_request_take_record_grab_or_capture_video_or_clip
+      - directive_must_include_numeric_seconds
+      - with_sound_or_audio_maps_to_include_audio_true
+      - applies_to_trusted_service_policy_not_arbitrary_user_text
+      - do_not_create_duplicate_behavioral_prompts
+    anchors:
+      code: [scripts/nemotron_voicechat_pipeline.py:plan_trusted_service_tools]
+      tests: [tests/test_current_time_skill_publisher.py]
+      commit: 535a4c9d325a4f948b8d7877a6882ddbd74af8a4
+    provenance_threads: [019f200d-d97e-7bb3-972e-8a67baba6cd8]
+
+  - id: D-EVIDENCE-001
+    status: superseded
+    decision: snapshot_attachment_may_fall_back_to_live_camera_URL
+    superseded_by: [D-EVIDENCE-002]
+    failure_mode: dialog_did_not_show_the_exact_frame_and_model_could_use_stale_live_image
+    do_not_reintroduce: true
+
+  - id: D-EVIDENCE-002
+    status: active
+    supersedes: [D-EVIDENCE-001]
+    decision: persist_and_serve_frozen_tool_evidence
+    invariants:
+      - current_snapshot_saves_exact_JPEG
+      - camera_clip_saves_MP4_and_passes_video_url
+      - no_evidence_means_no_visual_claim
+      - media_artifacts_are_never_commit_candidates
+    anchors:
+      code:
+        - scripts/nemotron_voice_responder.py:camera_clip_tool
+        - scripts/webcam_stream_server.py
+      tests:
+        - tests/test_current_time_skill_publisher.py
+        - tests/test_voicechat_fast_dialog.py
+    provenance_threads: [019f200d-d97e-7bb3-972e-8a67baba6cd8]
+
+  - id: D-CLIP-001
+    status: superseded
+    decision: let_ffmpeg_assume_default_MJPEG_input_frame_rate
+    superseded_by: [D-CLIP-002]
+    failure_mode: five_second_wifi_clip_took_about_twenty_five_seconds_and_timed_out
+    do_not_reintroduce: true
+
+  - id: D-CLIP-002
+    status: active
+    supersedes: [D-CLIP-001]
+    decision: declare_lane_MJPEG_input_rate_and_support_optional_audio
+    invariants:
+      - wifi_clip_input_fps_is_5
+      - server_clip_input_fps_is_8
+      - duration_is_clamped_1_to_10_seconds
+      - default_duration_is_3_seconds
+      - duration_and_seconds_aliases_are_normalized
+      - requested_audio_uses_lane_audio_endpoint_and_AAC
+    anchors:
+      code: [scripts/nemotron_voice_responder.py:camera_clip_tool]
+      tests: [tests/test_voicechat_fast_dialog.py]
+      commit: 535a4c9d325a4f948b8d7877a6882ddbd74af8a4
+    provenance_threads: [019f200d-d97e-7bb3-972e-8a67baba6cd8]
+
+  - id: D-CONTEXT-001
+    status: active
+    decision: persistent_dialog_window_controls_real_retained_history
+    invariants:
+      - range_is_1024_to_32768_tokens_in_1024_steps
+      - missing_file_defaults_to_32768
+      - effective_window_is_bounded_by_model_capacity
+      - change_applies_to_next_model_call
+      - tool_label_shows_exact_decision_model_input_tokens
+    anchors:
+      code:
+        - scripts/nemotron_dialog_config.py
+        - scripts/nemotron_voicechat_pipeline.py:configured_answer_context_window
+        - scripts/nemotron_voicechat_pipeline.py:conversation_history_token_budget
+        - scripts/webcam_stream_server.py:toolOutputLabel
+      tests: [tests/test_nemotron_dialog_config.py]
+      commit: 535a4c9d325a4f948b8d7877a6882ddbd74af8a4
+    provenance_threads: [019f202f-4cb6-7483-aedf-6326b580f9de]
+
+  - id: D-ASR-001
+    status: superseded
+    decision: evaluate_utterance_hard_cap_only_after_non_voice_disposition
+    superseded_by: [D-ASR-002]
+    failure_mode: wifi_buffers_reached_44_to_729_seconds_and_ASR_returned_HTTP_400
+    do_not_reintroduce: true
+
+  - id: D-ASR-002
+    status: active
+    supersedes: [D-ASR-001]
+    decision: enforce_18_second_cap_after_every_appended_chunk
+    invariants:
+      - cap_wins_even_while_chunk_is_classified_as_speech
+      - decode_dedicated_ASR_error_body
+      - attribute_error_to_Dedicated_ASR_not_Omni
+    anchors:
+      tests: [tests/test_nemotron_omni_migration.py]
+    provenance_threads: [019f200d-d97e-7bb3-972e-8a67baba6cd8]
+
+  - id: D-LOOP-001
+    status: active
+    decision: acoustic_loop_guard_listen_action_intentionally_suppresses_turn
+    invariants:
+      - separate_application_guard_not_intrinsic_ASR_setting
+      - no_supported_disable_flag_at_handoff
+      - disabling_dedicated_ASR_is_not_equivalent
+      - empty_response_can_be_intentional_and_must_not_trigger_broad_repeat_back
+    provenance_threads:
+      - 019f194a-0bfb-78e0-a6fb-6570a94735c6
+      - 019f19c5-44b1-75e1-a4af-9e0d92a86148
+
+  - id: D-PLAYBACK-001
+    status: active
+    decision: retry_only_definite_pre_playback_camera_login_failures
+    rationale: post_send_retry_can_duplicate_audible_speech
+    invariants:
+      - bounded_login_retries
+      - release_stale_session_before_retry
+      - fail_immediately_for_ambiguous_or_post_playback_errors
+      - record_retry_telemetry
+    anchors:
+      code:
+        - scripts/webcam_background_stack.py
+        - scripts/webcam_stream_server.py
+      tests: [tests/test_deepstream_focus_routing.py]
+    provenance_threads: [019f19c5-44b1-75e1-a4af-9e0d92a86148]
+
+  - id: D-UI-001
+    status: active
+    decision: planner_panel_has_server_rendered_initial_state_and_read_only_refresh
+    rationale: HTTP_200_followed_by_client_exception_falsely_displayed_load_failed
+    invariants:
+      - initial_template_and_path_are_embedded_in_rendered_HTML
+      - fetch_refresh_failure_does_not_invalidate_loaded_content
+      - prompt_read_retry_never_writes_or_replaces_unsaved_edit
+    anchors:
+      code: [scripts/webcam_stream_server.py]
+      tests:
+        - tests/test_tool_planner_template.py
+        - tests/test_system_prompt_persistence.py
+    provenance_threads:
+      - 019f18af-e9c6-7b43-99c9-d76349af696c
+      - 019f1936-f3e9-7093-a248-6d35d7abecaa
+
+  - id: D-GIT-001
+    status: active
+    decision: preserve_live_dirty_worktree_and_stage_exact_paths_only
+    invariants:
+      - never_blanket_clean_reset_or_checkout
+      - never_git_add_dot
+      - exclude_keys_secrets_TLS_private_keys_logs_databases_runtime_state_and_media
+      - tracked_generated_files_still_remain_excluded_from_ordinary_commits
+      - nested_DeepStream_checkout_requires_explicit_separate_handling
+    provenance_threads: [019f2032-b19f-7f91-be7f-c79680b9407d]
