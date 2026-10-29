@@ -315,8 +315,14 @@ helm upgrade --install "$RELEASE" ./dev-profile-lvs \
   -f "$WORKSHOP_DIR/aks/values/values-aks-a100.yaml" \
   --set global.externalHost="vss.${EXTERNAL_HOST}.nip.io" \
   --set global.kibanaPublicUrl="http://kibana.vss.${EXTERNAL_HOST}.nip.io" \
+  --set-string 'vss-agent-ui.extraEnv[0].name=NEXT_PUBLIC_VIOS_API_URL' \
+  --set-string "vss-agent-ui.extraEnv[0].value=http://vss.${EXTERNAL_HOST}.nip.io/vst/api" \
   -n "$NAMESPACE" --timeout 10m
 ```
+
+The UI reads `NEXT_PUBLIC_VIOS_API_URL` when uploading videos. Both this URL
+and the other browser URLs use the LoadBalancer IP captured in Task 4. Keeping
+the value in Helm ensures it remains set after a chart upgrade.
 
 `managed-csi-premium` is the tested Azure StorageClass. Check `kubectl get sc`
 and change the workshop value if your cluster uses another class.
@@ -505,6 +511,22 @@ All URLs resolve to the same Azure public IP ($EXTERNAL_HOST) via nip.io:
 ## Task 7: Test the VSS blueprint
 
 *  Download a free video from [https://www.pexels.com/videos/](https://www.pexels.com/videos/) or another free stock video website or use your own video and upload and analyze the video using the VSS Blueprint
+
+Before uploading, confirm that the UI exposes the video upload endpoint:
+
+```bash
+curl -fsS "http://vss.${EXTERNAL_HOST}.nip.io/__ENV.js" \
+  | grep -F 'NEXT_PUBLIC_VIOS_API_URL'
+```
+
+If an existing deployment reports `VIOS API URL not configured`, set the URL
+using the current ingress IP, then refresh the browser and retry the upload:
+
+```bash
+kubectl -n "$NAMESPACE" set env deployment/vss-agent-ui \
+  NEXT_PUBLIC_VIOS_API_URL="http://vss.${EXTERNAL_HOST}.nip.io/vst/api"
+kubectl -n "$NAMESPACE" rollout status deployment/vss-agent-ui --timeout=5m
+```
 
 1. In the UI, upload the clip and wait for its ingestion to finish. Confirm it
    appears in the video list and plays. Record the **sensor name** shown by VSS.
