@@ -56,12 +56,12 @@ chunks, analyzes and synthesizes results through a Context-Aware RAG pipeline. T
 
 !IMAGE[6jx4l4s2.png](instructions346914/6jx4l4s2.png)
 
-# Prerequisites 
+# Prerequisites
 
 - NVIDIA Account and API Key (follow [these instructions](https://nvdam.widen.net/s/tvgjgxrspd/create-build-account-and-api-key) to create an account and generate an API Key)
 
 > [+Hint] Having trouble with your APi key?
-> 
+>
 > If you have trouble using your key, please use this one: +++<YOUR_NGC_API_KEY>+++
 
 ------
@@ -174,7 +174,7 @@ az aks get-credentials --resource-group rg-vss-aks --name aks-vss --overwrite-ex
 
 >+++helm install --create-namespace --namespace gpu-operator nvidia/gpu-operator --generate-name+++
 
-### 3. Validate the installation 
+### 3. Validate the installation
 
 >+++kubectl get pods -n gpu-operator+++
 
@@ -194,13 +194,13 @@ We need to wait until all pods are in "Running" status and their "Ready" column 
 >+++helm upgrade --install nim-operator nvidia/k8s-nim-operator  -n nim-operator --create-namespace --version=3.1.0+++
 
 
-### 3. Validate the installation 
+### 3. Validate the installation
 
 >+++kubectl get pods -n nim-operator+++
 
 We need to wait until all pods are in "Running" status and their "Ready" column shows all pods ready (e.g. 1/1, 2/2 etc.)
 ------
-# Task 4: Install ingress-nginx 
+# Task 4: Install ingress-nginx
 
 The VSS LVS profile expects global.externalHost to be set at chart install time - the UI bakes that hostname into its NEXT_PUBLIC_* env vars. We therefore install the ingress controller first, capture the Azure-provisioned LoadBalancer IP, then install VSS using that IP.
 
@@ -256,7 +256,7 @@ helm upgrade --install "$RELEASE" ./dev-profile-lvs \
   --set-string 'nims.cosmos-reason2-8b.envByHardware.A100-80GB[1].value=1'
 ```
 
-**StorageClass: managed-csi-premium (Premium SSD)**  is recommended - NIM model caches are ~120 GiB each and benefit from premium throughput on first model load. 
+**StorageClass: managed-csi-premium (Premium SSD)**  is recommended - NIM model caches are ~120 GiB each and benefit from premium throughput on first model load.
 
 ### 3. Wait for pods to come up
 
@@ -378,7 +378,7 @@ sed -e "s/<RELEASE_NAME>/${RELEASE}/g" \
 
 All URLs resolve to the same Azure public IP ($EXTERNAL_HOST) via nip.io:
 
-Copy the url and open on your laptop, **not** jumpbox 
+Copy the url and open on your laptop, **not** jumpbox
 
 >+++echo "Open http://vss.${EXTERNAL_HOST}.nip.io/"+++
 
@@ -421,4 +421,3 @@ All URLs resolve to the same Azure public IP ($EXTERNAL_HOST) via nip.io:
 * [VSS Github](https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization) : https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization
 
 * [VSS Blueprint on AKS](https://github.com/azeltov/vss-msbuild-demo) - Hands-On Workshop Repo: https://github.com/azeltov/vss-msbuild-demo
-

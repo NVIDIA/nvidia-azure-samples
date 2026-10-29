@@ -15,10 +15,12 @@ repos:
     rev: v0.22.1
     hooks:
       - id: markdownlint-cli2
-        exclude: ^\.github/PULL_REQUEST_TEMPLATE\.md$
+        # Preserve Skillable export syntax and platform-managed asset references.
+        exclude: ^(\.github/PULL_REQUEST_TEMPLATE\.md|agentic/aks-samples/vss-on-aks/skillable/readme-vss(2\.4|3\.3)\.md)$
 
   - repo: https://github.com/tcort/markdown-link-check
     rev: v3.11.2
     hooks:
       - id: markdown-link-check
+        exclude: ^agentic/aks-samples/vss-on-aks/skillable/readme-vss(2\.4|3\.3)\.md$
         args: [-q, --config, .github/markdown-link-check-config.json]

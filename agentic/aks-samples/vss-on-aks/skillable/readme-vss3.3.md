@@ -58,12 +58,12 @@ chunks, analyzes and synthesizes results through a Context-Aware RAG pipeline. T
 
 Services are exposed through one Azure public IP using the **HAProxy Kubernetes Ingress** controller and [`nip.io`](https://nip.io/) hostnames. This update targets VSS `v3.3.0rc0`: deployment, summarization, and report generation were validated on an existing cluster with two NC48ads nodes (four A100 80 GB GPUs total). Creating a fresh cluster and the browser upload control remain to be validated.
 
-# Prerequisites 
+# Prerequisites
 
 - NVIDIA Account and API Key (follow [these instructions](https://nvdam.widen.net/s/tvgjgxrspd/create-build-account-and-api-key) to create an account and generate an API Key)
 
 > [+Hint] Having trouble with your APi key?
-> 
+>
 > If you have trouble using your key, generate an NGC API key with access to the required models and containers: +++<YOUR_NGC_API_KEY>+++
 
 ------
@@ -184,7 +184,7 @@ validation used GPU Operator `v26.7.1` with `driver.enabled=false`,
 `toolkit.enabled=false`, and `devicePlugin.enabled=false`. Reuse an existing
 operator installation; do not install a second driver or device plugin.
 
-### 3. Validate the installation 
+### 3. Validate the installation
 
 >+++kubectl get pods -n gpu-operator+++
 
@@ -204,7 +204,7 @@ We need to wait until all pods are in "Running" status and their "Ready" column 
 >+++helm upgrade --install nim-operator nvidia/k8s-nim-operator  -n nim-operator --create-namespace --version=3.1.2+++
 
 
-### 3. Validate the installation 
+### 3. Validate the installation
 
 >+++kubectl get pods -n nim-operator+++
 
@@ -472,7 +472,7 @@ sed -e "s/<RELEASE_NAME>/${RELEASE}/g" \
 
 All URLs resolve to the same Azure public IP ($EXTERNAL_HOST) via nip.io:
 
-Copy the url and open on your laptop, **not** jumpbox 
+Copy the url and open on your laptop, **not** jumpbox
 
 >+++echo "Open http://vss.${EXTERNAL_HOST}.nip.io/"+++
 
@@ -534,4 +534,3 @@ each workshop run.
 * [VSS Github](https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization) : https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization
 
 * [VSS Blueprint on AKS](https://github.com/azeltov/vss-msbuild-demo) - Hands-On Workshop Repo: https://github.com/azeltov/vss-msbuild-demo
-
