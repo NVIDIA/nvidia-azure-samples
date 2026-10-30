@@ -23,13 +23,12 @@ TITLE = "NVIDIA - Nemoclaw with Microsoft Foundry and AKS"
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 NS = {"w": W[1:-1]}
-USERNAME = "@lab.CloudResourceTemplate(NemoClaw_AKS_Ignite).Parameters[vmAdminUsername]"
 ENVIRONMENT = """| Assigned environment | Value |
 | --- | --- |
 | Lab instance | @lab.LabInstance.Id |
-| Azure username | @lab.CloudPortalCredential(User1).Username |
-| Subscription | @lab.CloudSubscription.Name |
-| Resource group | @lab.CloudResourceGroup(ResourceGroup1).Name |
+| Azure username | Resources tab: assigned cloud credentials |
+| Subscription | Resources tab: assigned Azure subscription |
+| Resource group | Azure VM Overview: Resource group |
 
 """
 
@@ -65,6 +64,9 @@ def paragraph_markdown(paragraph, relationships):
 
 def wrap(value, prefix=""):
     value = value.replace("https://portal.azure.com", "<https://portal.azure.com>")
+    if value.startswith("Note:"):
+        value = "**Note:**" + value[len("Note:"):]
+        prefix = "> "
     if value.startswith("Expected:"):
         value = "**Expected:**" + value[len("Expected:"):]
     return textwrap.fill(value, width=88, initial_indent=prefix,
@@ -134,7 +136,7 @@ def export():
             output.append("\n".join(lines))
 
     portable = "\n\n".join(learner) + "\n"
-    skillable = portable.replace("ssh labuser@VM_PUBLIC_IP", f"ssh {USERNAME}@VM_PUBLIC_IP")
+    skillable = portable
     skillable = re.sub(
         r"\s*Delivery setup:\s*\[coordinator\s+checklist\]\(docs/COORDINATOR-CHECKLIST\.md\)\.",
         "", skillable, count=1)

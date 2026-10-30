@@ -4,7 +4,7 @@
 
 Learner instructions
 
-Microsoft Ignite 2026  |  Updated 16 October 2026
+Microsoft Ignite 2026  |  Instructions revision 27 October 2026
 
 Install and customize an AI agent to investigate an unhealthy Azure Kubernetes Service
 (AKS) application, approve a repair, and verify recovery using managed Model Context
@@ -39,15 +39,8 @@ Allow 60 minutes, subject to rehearsal. Follow the tasks in order. Delivery setu
 
 ## Before you start
 
-Use your assigned Skillable lab and Resources tab. The platform prepares AKS and the
-model.
-
-| Item | Where to find it |
-| --- | --- |
-| Windows client credentials | Resources entry for Win11-CL-01, if a desktop sign-in is required |
-| Azure username and password or TAP | Assigned cloud credentials in Resources |
-| Ubuntu username and password | Resources entry for NemoClaw_AKS_Ignite; default username labuser |
-| Ubuntu public IP address | Assigned Azure VM Overview page |
+Use your assigned Skillable lab. The platform prepares AKS and the model. The connection
+page below identifies each required credential.
 
 Keep credentials out of prompts and screenshots. The model-provider key stays in AKS.
 
@@ -64,15 +57,26 @@ address; other lab names are fixed.
 
 ## Connect to Ubuntu
 
-1. If required, sign in to the Windows client using Resources credentials.
+| Item | Where to find it |
+| --- | --- |
+| Windows client credentials | Resources entry for Win11-CL-01, if a desktop sign-in is required |
+| Azure username and password or TAP | Assigned cloud credentials in Resources |
+| Ubuntu username and password | Resources entry for NemoClaw_AKS_Ignite; default username labuser |
+| Ubuntu public IP address | VM Overview: public IP associated with the network interface (NIC) |
 
-2. Sign in at <https://portal.azure.com> with the assigned Azure credentials or
-   Temporary Access Pass.
+1. If required, sign in to the Windows client using the Windows credentials in
+   Resources.
 
-3. Open the assigned resource group and Ubuntu VM whose name starts with ignite-agent-
-   and ends with -vm.
+2. Sign in at <https://portal.azure.com> with the assigned Azure username and password
+   or Temporary Access Pass (TAP) from Resources.
 
-4. Copy its Public IP address from Overview.
+3. In the portal, open Virtual machines. Filter to the subscription shown in Resources
+   and select your assigned VM: its name starts with ignite-agent- and ends with -vm.
+   Its Overview page shows the actual resource group name.
+
+4. On that VM, copy the Public IP address associated with its network interface (NIC).
+   If two addresses appear, use the NIC address. The NAT gateway public IP is for
+   outbound traffic and is not the SSH address.
 
 5. Open Cloud Shell in Bash. Choose No storage account required if offered.
 
@@ -82,9 +86,9 @@ address; other lab names are fixed.
 ssh labuser@VM_PUBLIC_IP
 ```
 
-Use the Ubuntu username from Resources if it differs from labuser. Confirm the
-first-connection fingerprint with the lab assistant. Enter the VM password; typing stays
-hidden.
+For SSH, use the Ubuntu username and VM password under NemoClaw_AKS_Ignite in Resources.
+The usual username is labuser. Confirm the first-connection fingerprint with the lab
+assistant. Password typing stays hidden.
 
 ### Check infrastructure readiness
 
@@ -98,11 +102,16 @@ python3 -m json.tool /etc/ignite-lab/ready.json
 checks.agent awaiting-learner-install. If missing or failed, stop and contact the lab
 assistant.
 
+> **Note:** Instructor recovery instance only. If your instructor assigned a
+  preinstalled instance and the report says status ready with agent ready, load Task 1
+  settings, skip the installer and attachment, and continue at Check the sandbox and
+  tool catalog.
+
 ## Task 1 Install and attach your agent
 
 ### Load the supplied connection settings
 
-Run as the assigned Ubuntu user, without sudo:
+Run on Ubuntu as labuser, or the assigned Ubuntu username:
 
 ```bash
 source ~/.config/ignite-lab/environment.sh
@@ -110,8 +119,8 @@ docker info --format '{{.ServerVersion}}'
 node --version
 ```
 
-Both version checks should succeed. Do not share environment.sh; it contains lab
-credentials.
+**Expected:** Node v24.21.0; Docker prints a server version (29.9.1 in the tested run).
+Stop if either check fails. Do not share environment.sh; it contains lab credentials.
 
 ### Verify and run the pinned installer
 
@@ -123,9 +132,9 @@ bash /opt/ignite-lab/install-nemoclaw-pinned.sh \
   --non-interactive --yes-i-accept-third-party-software
 ```
 
-Require checksum OK. This command accepts the third-party software notice, installs
-NemoClaw v0.0.132, and creates ignite-agent. Wait for onboarding to finish; ask for help
-if it fails.
+Require checksum OK. This accepts the third-party software notice and creates
+ignite-agent. Plan for 5-10 minutes; the successful rehearsal took 4 minutes 37 seconds.
+Downloads vary. Wait for installation complete and the Ubuntu prompt before continuing.
 
 ### Attach the operations MCP server
 
@@ -151,22 +160,25 @@ nemoclaw sandbox exec ignite-agent --timeout 90 -- \
   openclaw mcp probe aks-ops --json
 ```
 
-**Expected:** NemoClaw v0.0.132; sandbox running; aks-ops attached; managed credential
-ready. Discovery should list 11 tools with diagnostics []. Names may start with
-aks-ops__. A listed tool can still be denied; later calls verify enforcement.
+**Expected:** NemoClaw v0.0.132, sandbox running, and MCP attached with credential
+ready. Only the final command, openclaw mcp probe, lists the 11 tool names. Find
+verify_application, get_desired_config, and get_runtime_config. Names may have an
+aks-ops__ prefix. Listed tools can still be denied.
 
 ### Run the baseline prompt
 
 ```bash
+set -o pipefail
 IGNITE_MESSAGE='What is your role when investigating a production API outage?
 Give me a short plan.'
 nemoclaw sandbox exec ignite-agent --timeout 240 -- \
   openclaw agent --agent main --session-id ignite-baseline-1 \
-  --message "$IGNITE_MESSAGE"
+  --message "$IGNITE_MESSAGE" | tee ~/ignite-baseline.txt
 ```
 
-Save the response for comparison. If the model fails, use Troubleshooting before
-continuing.
+The reply is displayed and saved as ignite-baseline.txt on Ubuntu. Task 2 uses this same
+terminal, briefly enters the sandbox, then returns to Ubuntu. If the model fails, stop
+and use Troubleshooting.
 
 ## Task 2 Customize the agent instructions
 
@@ -176,16 +188,18 @@ Open the sandbox shell from the Ubuntu host:
 nemoclaw ignite-agent connect
 ```
 
-Inside the sandbox, choose your priority and reporting style:
+Inside the sandbox, choose a priority. For your first run, keep the supplied
+three-bullet reporting rule so the comparison has a clear target:
 
 1. Priority: choose fastest safe recovery or one extra evidence check. Explain why in
    one sentence.
 
-2. Reporting: choose three bullets or a short technical handoff. Name the evidence to
-   include.
+2. Reporting: use the supplied Health, Evidence, and Action bullets. Try a different
+   style after completing the comparison.
 
-Edit priority and reporting in the command below, then run it. Node.js saves the two
-fields and a backup; no sandbox editor is required.
+Edit priority in the command below and keep reporting unchanged for your first
+comparison, then run it. Node.js saves the two fields and a backup; no sandbox editor is
+required.
 
 ```bash
 node <<'NODE'
@@ -220,18 +234,30 @@ Return to Ubuntu:
 exit
 ```
 
-Ask the same question with a fresh session:
+Back at the Ubuntu prompt, ask the same question with a fresh session and save the new
+reply:
 
 ```bash
+set -o pipefail
 IGNITE_MESSAGE='What is your role when investigating a production API outage?
 Give me a short plan.'
 nemoclaw sandbox exec ignite-agent --timeout 240 -- \
   openclaw agent --agent main --session-id ignite-custom-1 \
-  --message "$IGNITE_MESSAGE"
+  --message "$IGNITE_MESSAGE" | tee ~/ignite-custom.txt
 ```
 
-Record one behavior change. If none appears, clarify your rule and retry once with a new
-session name, such as ignite-custom-2.
+The default rule asks for three bullets labelled Health, Evidence, and Action. In the
+rehearsal, the baseline had eight numbered steps and the new reply had those three
+bullets; wording and baseline format vary. Show the labels from the saved new reply:
+
+```bash
+grep -nE 'Health|Evidence|Action' ~/ignite-custom.txt
+```
+
+Record whether the new reply follows your rule and differs from the baseline saved in
+ignite-baseline.txt. If both already use that format, or the rule is ignored, clarify
+your reporting rule and retry once as ignite-custom-2. Do not count matching labels
+alone as proof of a change.
 
 ## Task 3 Choose the investigation policy
 
@@ -254,15 +280,15 @@ nemoclaw sandbox mcp ignite-agent update aks-ops \
   --deny-tool get_logs
 ```
 
-Check MCP attachment and credential readiness:
+Check MCP connection readiness (this output is not a tool catalog):
 
 ```bash
 nemoclaw sandbox mcp ignite-agent status aks-ops --json
 ```
 
 Record your choice and the update result. Each update replaces the deny list. MCP status
-confirms connection readiness; later tool calls test the denials. Task 7 permits restart
-while keeping scaling denied.
+shows the connection, not individual tool names or proof of denial. Task 1 lists the
+tools; Tasks 6 and 8 test enforcement. Task 7 permits restart only.
 
 ## Task 4 Diagnose the unhealthy service
 
@@ -292,8 +318,10 @@ The desired URL is correct, but the running process retains the old value. Resta
 service-api to load the corrected environment. Editing the ConfigMap again or suggesting
 a live environment edit will not refresh this process.
 
-Save the tool results and proposed repair. An agent summary alone is not verification;
-ask the assistant for missing tool evidence.
+Require all three tool results and the expected configuration difference above. A reply
+saying no final summary was produced is incomplete, not a diagnosis. Stop at Task 4,
+save the session ID and error, and ask the lab assistant to inspect tool history. Do not
+proceed to restart or approval.
 
 ## Task 5 Review an untrusted application log
 
@@ -501,6 +529,13 @@ new lab requires its new credentials.
 
 Stop and share the failed check, lab ID, and nonsecret error with the assistant.
 Provisioning, template, and Azure permission fixes belong to the coordinator.
+
+### No final investigation summary
+
+Save the task command, session ID, and nonsecret error. The assistant must inspect the
+recorded tools to distinguish failed or missing calls from a missing model summary. This
+message alone does not establish a timeout or policy denial. Do not reinstall or repeat
+a mutation to obtain a summary.
 
 ### API rate limit reached or HTTP 429
 
