@@ -64,16 +64,14 @@ llms:
     top_p: 0.7
     max_tokens: 16384
 
-  nemotron_lightning_writer_llm:
+  nemotron_ultra_writer_llm:
     _type: nim
-    model_name: ${FOUNDRY_LIGHTNING_MODEL:-NemotronLightning}
+    model_name: ${FOUNDRY_ULTRA_MODEL:-Nemotron3Ultra}
     base_url: ${FOUNDRY_ENDPOINT}
-    api_key: ${FOUNDRY_LIGHTNING_KEY}
+    api_key: ${FOUNDRY_ULTRA_KEY}
     temperature: 0.2
     top_p: 0.7
     max_tokens: 32768
-    parallel_tool_calls: false
-    reasoning_effort: none
 
   summary_llm:
     _type: nim
@@ -137,7 +135,7 @@ functions:
     source_router_llm: nemotron_ultra_llm
     researcher_llm: nemotron_ultra_llm
     planner_llm: nemotron_ultra_llm
-    writer_llm: nemotron_lightning_writer_llm
+    writer_llm: nemotron_ultra_writer_llm
     skills: deep_research_skills
     verbose: true
 
