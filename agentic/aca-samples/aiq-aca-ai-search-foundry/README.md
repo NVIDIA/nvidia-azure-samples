@@ -9,9 +9,9 @@ Knowledge Base source.
 
 | Role | Model | Hosting |
 | --- | --- | --- |
-| Intent classification, shallow research, summaries, final report writing | Nemotron 3.5 Lightning 30B-A3B v1 | Foundry Fireworks, Data Zone Standard pay-per-token |
+| Intent classification, shallow research, summaries | Nemotron 3.5 Lightning 30B-A3B v1 | Foundry Fireworks, Data Zone Standard pay-per-token |
 | Document embeddings (2,048 dimensions) | Nemotron 3 Embed 1B BF16 | NVIDIA hosted API |
-| Clarification and deep research | Nemotron 3 Ultra NVFP4 v1 | Foundry Fireworks, Data Zone Standard pay-per-token |
+| Clarification, deep research, final report writing | Nemotron 3 Ultra NVFP4 v1 | Foundry Fireworks, Data Zone Standard pay-per-token |
 
 Lightning and Ultra use their official Fireworks catalog deployments. Embed
 uses its official hosted endpoint on build.nvidia.com. Fireworks chat models
@@ -33,8 +33,10 @@ infrastructure secret and data-plane access. Each participant adds their
 NVIDIA API key as an encrypted Container Apps secret during backend deployment.
 
 Deep research enables AI-Q 2.2.1's built-in synthesis writer skill. It instructs
-the Lightning writer to publish the final Markdown report with exact verified
+the Ultra writer to publish the final Markdown report with exact verified
 source keys, preserving AI-Q's citation-integrity checks for native Search.
+The writer uses a separate 32,768-token profile, matching AI-Q's documented
+Ultra writer role while retaining the Foundry endpoint configuration.
 
 ## Prerequisites
 
@@ -245,7 +247,7 @@ Open the displayed frontend URL.
 3. Ask a question answered only by that document and select Knowledge Base.
 4. Confirm the answer contains retrieved evidence and citations.
 5. Run a shallow request and confirm Lightning handles it.
-6. Run a detailed research request answerable from the uploaded documents and confirm Ultra handles deep research.
+6. Run a detailed research request answerable from the uploaded documents and confirm Ultra handles deep research and final report writing.
 7. Confirm the final report cites the uploaded documents. Knowledge Base is the only source in this sample.
 
 Useful diagnostics:
