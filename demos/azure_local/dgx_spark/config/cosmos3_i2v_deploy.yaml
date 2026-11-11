@@ -1,0 +1,15 @@
+# Local vLLM-Omni deploy overlay for nvidia/Cosmos3-Super-Image2Video.
+# The base single-stage Cosmos3 config is auto-detected by model class; this
+# file only carries local service choices that are awkward or unavailable as
+# CLI flags in the ARM64 cosmos3 container build.
+
+async_chunk: false
+trust_remote_code: true
+
+stages:
+  - stage_id: 0
+    max_num_seqs: 1
+    enforce_eager: true
+    model_class_name: Cosmos3OmniDiffusersPipeline
+    model_config:
+      guardrails: false

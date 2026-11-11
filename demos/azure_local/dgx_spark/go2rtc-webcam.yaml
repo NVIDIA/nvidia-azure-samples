@@ -1,0 +1,13 @@
+api:
+  listen: "127.0.0.1:1984"
+rtsp:
+  listen: "127.0.0.1:8554"
+webrtc:
+  listen: "127.0.0.1:8555"
+streams:
+  wifi_camera:
+    - "onvif://admin:Noway123%21@192.168.1.188"
+    - "rtsp://admin:Noway123%21@192.168.1.188:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif#backchannel=0"
+  wifi_camera_speaker:
+    - "onvif://admin:Noway123%21@192.168.1.188"
+    - "rtsp://admin:Noway123%21@192.168.1.188:554/cam/realmonitor?channel=1&subtype=1&unicast=true&proto=Onvif#backchannel=1"
