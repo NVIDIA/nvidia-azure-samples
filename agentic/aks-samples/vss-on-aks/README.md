@@ -349,34 +349,49 @@ The UI hostname should be `vss.<EXTERNAL_HOST>.nip.io`; Kibana uses
 
 ---
 
-## Task 7: Verify and try guided prompts
+## Task 7: Summarize a video and generate a report
+You should get a url like this to access VSS UI. Copy it and open the url in Edge: http://vss.YOUR-IP.nip.io/
+
+<!--  Keep **LLM Reasoning off** and **VLM Reasoning off**, and use the
+exact video name shown by VSS, including any added suffix.
+-->
+
+
+**Download the videos**. Download sample videos
 
 ```bash
-echo "Open http://vss.${EXTERNAL_HOST}.nip.io/"
-curl -sS -o /dev/null -w 'UI HTTP %{http_code}\n' \
-  "http://vss.${EXTERNAL_HOST}.nip.io/"
-kubectl get pods,nimcache,nimservice -n "$NAMESPACE"
+curl -fLO https://raw.githubusercontent.com/NVIDIA/nvidia-azure-samples/main/agentic/aks-samples/vss-on-aks/videos/sample-sim-box-conveyor.mp4
+curl -fLO https://raw.githubusercontent.com/NVIDIA/nvidia-azure-samples/main/agentic/aks-samples/vss-on-aks/videos/sample-sim-traffic.mp4
+curl -fLO https://raw.githubusercontent.com/NVIDIA/nvidia-azure-samples/main/agentic/aks-samples/vss-on-aks/videos/sample-warehouse-ladder.mp4
+curl -fLO https://raw.githubusercontent.com/NVIDIA/nvidia-azure-samples/main/agentic/aks-samples/vss-on-aks/videos/sample-sim-jaywalking.mp4
+curl -fLO https://raw.githubusercontent.com/NVIDIA/nvidia-azure-samples/main/agentic/aks-samples/vss-on-aks/videos/warehouse_safety_0001.mp4
+curl -fLO https://raw.githubusercontent.com/NVIDIA/nvidia-azure-samples/main/agentic/aks-samples/vss-on-aks/videos/warehouse_safety_0002.mp4
 ```
 
-Use a short, non-sensitive MP4 for the exercise:
+In **Video Management**, upload the video from the VM Desktop. Click upload button on left navigation menu
 
-1. In the UI, upload the clip and wait for its ingestion to finish. Confirm it
-   appears in the video list and plays. Record the **sensor name** shown by VSS.
-2. Start a new chat scoped to that sensor. Ask: **“Summarize this video and cite
-   the timestamps of the main events.”** Compare the response with playback.
-3. Ask: **“What changes between the beginning, middle, and end? Mention only
-   things visible in this video.”** Check that the answer does not invent people,
-   vehicles, or actions absent from the clip.
-4. Ask: **“Generate a report for `<sensor name>` using video summarization.”**
-   Use the sensor name exactly as VSS displays it, generally without `.mp4`.
-   Accept or refine the report prompt, then open the Markdown/PDF and playback
-   links. Confirm the report names the intended sensor and timestamps match.
 
-If a report references a different sensor, start a new chat with the correct
-sensor selected and repeat the request. Record the UI action, response, and
-relevant pod logs if a step fails. The report generation and artifact links
-were validated on the A100 deployment; browser upload should be confirmed in
-each workshop run.
+choose one of the warehouse videos.
+
+select it, and  click **+Chat**.
+
+
+Lets do quick test and ask in chat window:
+
+> Describe video 
+
+
+> Generate a report summarizing all events happening in warehouse and cite the timestamps of the main events.
+
+press Submit for for default approval and generating report
+
+Report Output Sample:
+
+Click on PDF Report 
+
+Experiment with other videos or upload your own videos.
+
+
 
 ---
 
