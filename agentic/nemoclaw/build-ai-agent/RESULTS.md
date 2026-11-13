@@ -1,5 +1,31 @@
 # NemoClaw governed AKS lab: end-to-end results
 
+## Learner instruction review October 27 2026
+
+A new learner report identified credential and VM navigation ambiguity,
+missing timing and expected outputs, an unavailable sandbox editor, and a
+Task 4 response with no final summary. The supplied Task 4 command and nano
+instructions match the original guide, including the old 150-second limit
+and `ignite-investigate` session. The repository guide already used Node.js
+editing and explicit diagnostic reads. An older Skillable instruction copy
+is strongly indicated, but the live Studio content has not been inspected.
+
+The revised handout is stamped 27 October 2026. Credentials are next to the
+sign-in steps; VM navigation no longer depends on a resource-group token;
+the SSH address is explicitly the VM NIC public IP, not the NAT address.
+The guide gives the pinned Node version, measured install timing, an optional
+recovery note, saved baseline/custom replies and concrete comparison labels.
+It distinguishes MCP status from the native tool catalog, and requires
+actual Task 4 evidence before approval or restart. The export removes
+profile-dependent username/resource-group tokens from the learner path.
+
+The reported message does not establish a timeout, policy denial, health
+result or configuration difference. Session history is needed to determine
+which tools ran and whether any failed. No runtime or Bicep change is made
+for this report. Documentation checks do not reproduce the model failure or
+validate a fresh learner run. Publishing the complete revised Markdown into
+Skillable and testing a new launch remain required.
+
 ## Fresh learner rehearsal October 16 2026 instance 66301586
 
 The core learner incident and boundary workflow passed in a fresh Skillable

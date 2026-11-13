@@ -21,9 +21,9 @@ Verify actual provider limits.
 
 ## Save the corrected Bicep
 
-Save the reviewed infra/main.bicep in Studio; GitHub changes do not update Studio. The
-bundle includes the runtime fixes and a 300-second wait for private ingress IP
-10.42.4.10.
+Save the reviewed infra/main.bicep in Studio; GitHub changes do not update Studio.
+Publish SKILLABLE-INSTRUCTIONS.md separately and confirm revision 27 October 2026 in a
+fresh learner launch.
 
 Current Bicep: 63,871 bytes. SHA-256 below; use this fingerprint for the imported
 bundle.

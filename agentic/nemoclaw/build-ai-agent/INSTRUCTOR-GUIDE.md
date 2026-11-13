@@ -37,6 +37,66 @@ unnecessary `sessions_yield` errors separately from expected policy denials;
 both occurred in this rehearsal. MCP status confirms connection readiness,
 while actual calls and audit evidence establish enforcement.
 
+## Reviewing a missing Task 4 summary
+
+The expected Task 4 result is application HTTP 503, desired URL
+`http://dependency-api:8081`, runtime URL
+`http://dependency-api-invalid:8081`, and a proposed restart only. A message
+that no final summary was produced is incomplete. It does not identify a
+timeout, denial or learner mistake.
+
+First confirm the displayed instruction revision is 27 October 2026. The
+original command used a 150-second limit, a broad prompt and session
+`ignite-investigate`; the current command names the three required reads and
+uses a fresh session. Compare the actual command before attributing the
+failure to the model or infrastructure.
+
+On the Ubuntu host, inspect the recorded session before rerunning anything.
+The following read-only command is for the original screenshot session.
+Change only the session key if the learner used a different ID. It projects
+tool metadata and the three diagnostic values; it excludes arbitrary logs,
+credential settings and raw error bodies.
+
+```bash
+nemoclaw sandbox exec ignite-agent --timeout 60 -- \
+  openclaw gateway call chat.history \
+  --params '{"sessionKey":"agent:main:explicit:ignite-investigate","limit":60}' \
+  --json |
+jq '{
+  toolEvents: [.messages[]
+    | select(.role == "toolResult" or .role == "tool")
+    | {tool: .toolName, isError: (.isError // false),
+       policyDenied: any(.content[]?;
+         .type == "text" and (.text | contains("policy_denied")))}],
+  diagnosticReads: [.messages[]
+    | select(.role == "toolResult" or .role == "tool")
+    | .content[]? | select(.type == "text") | .text
+    | try (capture("(?<payload>\\{[\\s\\S]*\\})").payload | fromjson) catch empty
+    | select(.result.details.mcpServer == "aks-ops")
+    | select(.result.details.mcpTool == "verify_application"
+          or .result.details.mcpTool == "get_desired_config"
+          or .result.details.mcpTool == "get_runtime_config")
+    | .result.details.mcpTool as $tool
+    | (try (.result.content[0].text | fromjson) catch {})
+    | {tool: $tool, status, healthy,
+       desiredUrl: .data.DEPENDENCY_URL,
+       runtimeUrl: (.effective_dependency_url
+         // .detail.dependency.effective_dependency_url)}]
+}'
+```
+
+If required reads are absent or fail, stop and investigate that recorded
+failure. An application HTTP 503 is the intended incident, not itself a
+failed MCP transport call. If all required evidence is present but the
+summary is absent, report the observed values and the missing summary
+separately; do not repeat a mutation to generate prose. If already healthy,
+the instance may have been repaired earlier and needs coordinator review.
+
+To list tools, use Task 1's native `openclaw mcp probe aks-ops --json`.
+`nemoclaw sandbox mcp ... status` reports connection/provider readiness and
+does not list every tool or prove the deny list. Retain the expected
+restrictions while investigating.
+
 ## Learning design
 
 The attendee must leave with an agent they actually customized. The prepared
