@@ -12,7 +12,9 @@ Services are exposed through one Azure public IP using the **HAProxy Kubernetes 
 - `kubectl` and `helm` (3.x) installed
 - NGC API key — see the [NGC User Guide](https://docs.nvidia.com/ngc/latest/ngc-user-guide.html) for key generation instructions
 - Azure subscription with quota for `Standard_NC96ads_A100_v4` (96 vCPUs of `Standard NCADS_A100_v4` family)
-- A short MP4 you can use for the guided UI exercise
+- A short MP4 you can use for the guided UI exercise — six sample clips are
+  included in [videos/](videos/), starting with the smallest,
+  [warehouse_safety_0001.mp4](videos/warehouse_safety_0001.mp4) (6.3 MB)
 
 If you already have an AKS cluster with four available A100 80 GB GPUs, set the
 environment variables for that cluster, obtain its credentials, and continue
